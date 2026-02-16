@@ -5,7 +5,6 @@ import (
 	"log"
 	"time"
 
-	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -13,14 +12,14 @@ import (
 type Scheduler struct {
 	taskService *service.TaskService
 	redisClient *redis.RedisClient
-	timeout      time.Duration
+	timeout     time.Duration
 	done        chan bool
 }
 
 func NewScheduler(taskService *service.TaskService, timeout time.Duration, client *redis.RedisClient) *Scheduler {
 	return &Scheduler{
 		taskService: taskService,
-		timeout:      timeout,
+		timeout:     timeout,
 		done:        make(chan bool),
 		redisClient: client,
 	}
@@ -43,12 +42,17 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 			return
 		case <-t.C:
 			tasks := s.checkForUpcomingTasks(context.Background())
-
+			for _, task := range tasks {
+				err := s.redisClient.PublishTask(context.Background(), task)
+				if err != nil {
+					log.Printf("scheduler error: %v", err)
+				}
+			}
 		}
 	}
 }
 
-func (s *Scheduler) checkForUpcomingTasks(ctx context.Context) ([]int) {
+func (s *Scheduler) checkForUpcomingTasks(ctx context.Context) []string {
 	tasks, err := s.taskService.GetScheduledTasks(ctx)
 	if err != nil {
 		log.Printf("scheduler: error while checking upcoming tasks: %s", err)
