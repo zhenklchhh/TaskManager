@@ -8,12 +8,23 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_NAME=${POSTGRES_NAME}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-
+    
+  redis:
+    image: redis:latest
+    env_file: .env
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+  
   app:
     build: .
     env_file: .env
     depends_on:
       - postgres
+      - redis
     ports:
       - "8080:8080"
     environment:

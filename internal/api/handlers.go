@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/go-chi/chi"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -19,6 +20,8 @@ func NewHandler(service *service.TaskService) *Handler {
 	}
 }
 
+// todo: use router to get id from url path
+// implement helper function to handle errors to prevent duplicate of code
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req CreateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -43,14 +46,13 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
-	var id string
-	if err := json.NewDecoder(r.Body).Decode(&id); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
-		return
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		http.Error(w, "internal error: invalid id", http.StatusBadRequest)
 	}
 	t, err := h.taskService.GetTaskById(r.Context(), id)
 	if err != nil {
-		switch{
+		switch {
 		case errors.Is(err, domain.ErrTaskNotFound):
 			http.Error(w, err.Error(), http.StatusNotFound)
 		default:
@@ -60,5 +62,8 @@ func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(toTaskResponse(t))
+	err = json.NewEncoder(w).Encode(toTaskResponse(t))
+	if err != nil {
+
+	}
 }

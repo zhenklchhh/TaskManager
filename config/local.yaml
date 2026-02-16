@@ -1,0 +1,16 @@
+env: "local"
+storage_path: "./storage/storage.db"
+db:
+  name: "tasks"
+  user: "postgres"
+  password: "123456"
+  url:  "postgres://user:password@localhost:5432/dbname"
+redis:
+  address: "localhost:6379"
+  password: ""
+  database: 0
+  protocol: 2
+
+server:
+  timeout: 4s
+  iddle_timeout: 60s

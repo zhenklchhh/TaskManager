@@ -1,68 +1,91 @@
 package main
 
 import (
-	"context"
-	"log"
-	"net/http"
+	"fmt"
+	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/joho/godotenv"
-	"github.com/zhenklchhh/TaskManager/internal/repository/postgres"
-	"github.com/zhenklchhh/TaskManager/internal/service"
-	httpTransport "github.com/zhenklchhh/TaskManager/internal/transport/http"
+	"github.com/zhenklchhh/TaskManager/internal/config"
+)
 
-	"github.com/jackc/pgx/v5/pgxpool"
+const (
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
 )
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal(err)
-	}
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-	addr := os.Getenv("PORT")
-	if addr == "" {
-		addr = "8080"
-	}
-	addr = ":" + addr
+	cfg := config.MustLoad()
 
-	ctx := context.Background()
-	pool, err := pgxpool.New(ctx,dsn)
-	if err != nil {
-		log.Fatal(err)
-	}
-	repo := postgres.NewTaskRepository(pool)
-	s := service.NewTaskService(repo)
-	h := httpTransport.NewHandler(s)
-	r := httpTransport.Routes(h)
-	server := &http.Server{
-		Addr: addr,
-		Handler: r,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout: 60 * time.Second,
-	}
+	// TODO: delete print
+	fmt.Println(cfg)
 
-	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
-		}
-	}()
+	log := setupLogger(cfg.Env)
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// dsn := os.Getenv("DATABASE_URL")
+	// if dsn == "" {
+	// 	log.Fatal("DATABASE_URL is required")
+	// }
+	// addr := os.Getenv("PORT")
+	// if addr == "" {
+	// 	addr = "8080"
+	// }
+	// addr = ":" + addr
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	<-stop
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// ctx := context.Background()
+	// pool, err := pgxpool.New(ctx,dsn)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// repo := postgres.NewTaskRepository(pool)
+	// s := service.NewTaskService(repo)
+	// h := httpTransport.NewHandler(s)
+	// r := httpTransport.Routes(h)
+	// server := &http.Server{
+	// 	Addr: addr,
+	// 	Handler: r,
+	// 	ReadHeaderTimeout: 5 * time.Second,
+	// 	ReadTimeout: 15 * time.Second,
+	// 	WriteTimeout: 15 * time.Second,
+	// 	IdleTimeout: 60 * time.Second,
+	// }
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Println("shutdown error:", err)
+	// go func() {
+	// 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	// 		log.Fatal(err)
+	// 	}
+	// }()
+
+	// stop := make(chan os.Signal, 1)
+	// signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	// <-stop
+	// shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
+
+	// if err := server.Shutdown(shutdownCtx); err != nil {
+	// 	log.Println("shutdown error:", err)
+	// }
+}
+
+func setupLogger(env string) *slog.Logger {
+	var logger *slog.Logger
+
+	switch env {
+	case envLocal:
+		logger = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envDev:
+		logger = slog.New(
+			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envProd:
+		logger = slog.New(
+					slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
 	}
+	return logger
 }
