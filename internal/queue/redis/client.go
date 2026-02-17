@@ -20,13 +20,10 @@ const (
 	taskQueueName = "task:scheduled"
 )
 
-func NewRedisClient(addr, password string, protocol, db int) *RedisClient {
-	return &RedisClient{
+func NewRedisClient(addr string) *RedisClient {
+	return &RedisClient {
 		client: redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Password: password,
-			Protocol: protocol,
-			DB:       db,
+			Addr: addr,
 		}),
 	}
 }

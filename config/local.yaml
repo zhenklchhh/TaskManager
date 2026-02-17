@@ -1,16 +1,12 @@
 env: "local"
-storage_path: "./storage/storage.db"
 db:
-  name: "tasks"
-  user: "postgres"
-  password: "123456"
-  url:  "postgres://user:password@localhost:5432/dbname"
+   url: "postgres://postgres:123456@localhost:5432/taskmanager_db?sslmode=disable"
 redis:
   address: "localhost:6379"
   password: ""
   database: 0
-  protocol: 2
 
 server:
+  address: "localhost:8080"
   timeout: 4s
   iddle_timeout: 60s

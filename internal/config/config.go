@@ -9,14 +9,25 @@ import (
 
 type Config struct {
 	Env         string     `yaml:"env" env-default:"local"`
-	StoragePath string     `yaml:"storage_path" env-required:"./storage"`
-	Server      HTTPServer `yaml:"http_server"`
+	DBConfig DBConfig `yaml:"db"`
+	RedisConfig RedisConfig `yaml:"redis"`
+	Server      HTTPServer `yaml:"server"`
 }
 
 type HTTPServer struct {
 	Address      string        `yaml:"address" env-default:"localhost:8080"`
 	Timeout      time.Duration `yaml:"timeout" env-default:"4s"`
 	IddleTimeout time.Duration `yaml:"iddle_timeout" env-default:"60s"`
+}
+
+type DBConfig struct {
+	Url string `yaml:"url" env:"DATABASE_URL"`
+}
+
+type RedisConfig struct {
+	Address string `yaml:"address" env:"REDIS_ADDR"`
+	Password string `yaml:"password" env:"REDIS_PASSWORD"`
+	DB string `yaml:"database" env:"REDIS_DATABASE"`
 }
 
 func MustLoad() Config {

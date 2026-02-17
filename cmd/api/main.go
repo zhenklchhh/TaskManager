@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,56 +9,45 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
+	api "github.com/zhenklchhh/TaskManager/internal/api"
 	"github.com/zhenklchhh/TaskManager/internal/config"
 	"github.com/zhenklchhh/TaskManager/internal/repository/postgres"
 	"github.com/zhenklchhh/TaskManager/internal/service"
-)
-
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
+	"github.com/zhenklchhh/TaskManager/logger"
 )
 
 func main() {
 	cfg := config.MustLoad()
-	log := setupLogger(cfg.Env)
-	err := godotenv.Load()
-	if err != nil {
-		log.Error("erro", err)
+	log := logger.SetupLogger(cfg.Env)
+
+	if cfg.DBConfig.Url == "" {
+		log.Error("database url is required")
+		os.Exit(1)
 	}
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-	addr := os.Getenv("PORT")
-	if addr == "" {
-		addr = "8080"
-	}
-	addr = ":" + addr
 
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, dsn)
+	pool, err := pgxpool.New(ctx, cfg.DBConfig.Url)
 	if err != nil {
-		log.Fatal(err)
+		log.Error("error: ", err)
+		os.Exit(1)
 	}
 	repo := postgres.NewTaskRepository(pool)
 	s := service.NewTaskService(repo)
-	h := httpTransport.NewHandler(s)
-	r := httpTransport.Routes(h)
+	h := api.NewHandler(s)
+	r := api.Routes(h)
 	server := &http.Server{
 		Addr:              cfg.Server.Address,
 		Handler:           r,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		ReadTimeout:       cfg.Server.Timeout,
+		WriteTimeout:      cfg.Server.Timeout,
 		IdleTimeout:       cfg.Server.IddleTimeout,
 	}
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal(err)
+			log.Error("error: ", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -70,26 +58,6 @@ func main() {
 	defer cancel()
 
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Println("shutdown error:", err)
+		log.Error("shutdown error:", err)
 	}
-}
-
-func setupLogger(env string) *slog.Logger {
-	var logger *slog.Logger
-
-	switch env {
-	case envLocal:
-		logger = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envDev:
-		logger = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envProd:
-		logger = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
-	}
-	return logger
 }
