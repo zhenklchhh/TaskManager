@@ -17,6 +17,11 @@ type TaskCreateCmd struct {
 	CronExpr string
 }
 
+type TaskUpdateStatusCmd struct {
+	ID string
+	Status domain.TaskStatus
+}
+
 type TaskService struct {
 	repo repository.TaskRepository
 }
@@ -76,4 +81,16 @@ func (s *TaskService) GetScheduledTasks(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	return tasks, err
+}
+
+func (s *TaskService) UpdateTaskStatus(ctx context.Context, cmd *TaskUpdateStatusCmd) error {
+	id, err := uuid.Parse(cmd.ID)
+	if err != nil {
+		return err
+	}
+	err = s.repo.UpdateTaskStatus(ctx, id, string(cmd.Status))
+	if err != nil {
+		return err
+	}
+	return err
 }

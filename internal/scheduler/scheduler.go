@@ -11,7 +11,7 @@ import (
 
 type Scheduler struct {
 	taskService *service.TaskService
-	redisClient *redis.RedisClient
+	taskQueue redis.TaskQueue
 	timeout     time.Duration
 	done        chan bool
 }
@@ -21,7 +21,7 @@ func NewScheduler(taskService *service.TaskService, timeout time.Duration, clien
 		taskService: taskService,
 		timeout:     timeout,
 		done:        make(chan bool),
-		redisClient: client,
+		taskQueue: client,
 	}
 }
 
@@ -43,7 +43,7 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 		case <-t.C:
 			tasks := s.checkForUpcomingTasks(context.Background())
 			for _, task := range tasks {
-				err := s.redisClient.PublishTask(context.Background(), task)
+				err := s.taskQueue.PublishTask(context.Background(), task)
 				if err != nil {
 					log.Printf("scheduler error: %v", err)
 				}

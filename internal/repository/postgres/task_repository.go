@@ -3,7 +3,9 @@ package postgres
 import (
 	"context"
 	"errors"
+	"log"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
@@ -38,7 +40,7 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*do
 	var t domain.Task
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status, &t.RetryCount,
-			&t.MaxRetries, &t.CreatedAt, &t.UpdatedAt, &t.NextRunAt,
+		&t.MaxRetries, &t.CreatedAt, &t.UpdatedAt, &t.NextRunAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -68,4 +70,21 @@ func (r PostgresTaskRepository) GetScheduleTasks(ctx context.Context) ([]string,
 		}
 	}
 	return tasks, err
+}
+
+func (r PostgresTaskRepository) UpdateTaskStatus(ctx context.Context, id uuid.UUID, status string) error {
+	const q = `
+		UPDATE tasks
+		SET status = $1,
+		updated_at = NOW()
+		WHERE id = $2
+	`
+	res, err := r.pool.Exec(ctx, q, status, id)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		log.Printf("Task %v status didn't updated", id)
+	}
+	return nil
 }

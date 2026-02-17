@@ -20,50 +20,71 @@ func NewHandler(service *service.TaskService) *Handler {
 	}
 }
 
-// todo: use router to get id from url path
-// implement helper function to handle errors to prevent duplicate of code
 func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	var req CreateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "invalid json", http.StatusBadRequest)
+		handleError(errors.New("invalid json"), &w)
 		return
 	}
 	t, err := h.taskService.CreateTask(r.Context(), toCreateTaskCmd(req))
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrInvalidCron):
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		case errors.Is(err, domain.ErrValidation):
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		default:
-			http.Error(w, "internal error", http.StatusInternalServerError)
-		}
-		return
+		handleError(err, &w)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(toTaskResponse(t))
+	err = json.NewEncoder(w).Encode(toTaskResponse(t))
+	if err != nil {
+		handleError(err, &w)
+	}
 }
 
 func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		http.Error(w, "internal error: invalid id", http.StatusBadRequest)
+		handleError(errors.New("empty id"), &w)
 	}
 	t, err := h.taskService.GetTaskById(r.Context(), id)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrTaskNotFound):
-			http.Error(w, err.Error(), http.StatusNotFound)
-		default:
-			http.Error(w, "internal error", http.StatusInternalServerError)
-		}
-		return
+		handleError(err, &w)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	err = json.NewEncoder(w).Encode(toTaskResponse(t))
 	if err != nil {
+		handleError(err, &w)
+	}
+}
 
+func (h *Handler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		handleError(errors.New("empty id"), &w)
+	}
+	var req UpdateTaskInfo
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		handleError(errors.New("invalid json"), &w)
+		return
+	}
+	err := h.taskService.UpdateTaskStatus(r.Context(), &service.TaskUpdateStatusCmd{
+		ID: id,
+		Status: req.Status,
+	})
+	if err != nil {
+		handleError(err, &w)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func handleError(err error, w *http.ResponseWriter) {
+	switch {
+	case errors.Is(err, domain.ErrInvalidCron):
+		http.Error(*w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, domain.ErrValidation):
+		http.Error(*w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, domain.ErrTaskNotFound):
+		http.Error(*w, err.Error(), http.StatusNotFound)
+	default:
+		http.Error(*w, "internal error", http.StatusInternalServerError)
 	}
 }

@@ -1,0 +1,3 @@
+*.env
+# match yaml and .env configs
+# implement different config structures for redis and postgres
