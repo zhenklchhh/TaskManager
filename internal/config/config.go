@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -31,6 +32,10 @@ type RedisConfig struct {
 }
 
 func MustLoad() Config {
+	err := godotenv.Load()
+	if err != nil {
+		panic(".env file couldn't be loaded")
+	}
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
 		panic("config file not found")

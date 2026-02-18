@@ -75,7 +75,7 @@ func (s *TaskService) GetTaskById(ctx context.Context, id string) (*domain.Task,
 	return t, nil
 }
 
-func (s *TaskService) GetScheduledTasks(ctx context.Context) ([]string, error) {
+func (s *TaskService) GetScheduledTasks(ctx context.Context) ([]uuid.UUID, error) {
 	tasks, err := s.repo.GetScheduleTasks(ctx)
 	if err != nil {
 		return nil, err

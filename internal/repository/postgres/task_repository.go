@@ -50,24 +50,33 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*do
 	}
 	return &t, nil
 }
+// 2026/02/18 16:03:29 scheduler: error while checking upcoming tasks: can't scan into dest[0] (col: id):
+//  cannot scan uuid (OID 2950) in binary format into []string
 
-func (r PostgresTaskRepository) GetScheduleTasks(ctx context.Context) ([]string, error) {
+func (r PostgresTaskRepository) GetScheduleTasks(ctx context.Context) ([]uuid.UUID, error) {
 	const q = `
 		SELECT id
         FROM tasks
         WHERE next_run_at <= NOW() AND status = 'scheduled'
 	`
-	tasks := make([]string, 0)
+	tasks := make([]uuid.UUID, 0)
 	rows, err := r.pool.Query(ctx, q)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		err = rows.Scan(tasks)
+		// cant't scan uuid into string, maybe use pgtype.UUID
+		var stringID string
+		err = rows.Scan(stringID)
 		if err != nil {
 			return nil, err
 		}
+		id, err := uuid.Parse(stringID)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, id)
 	}
 	return tasks, err
 }

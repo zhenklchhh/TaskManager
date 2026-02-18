@@ -34,7 +34,7 @@ func main() {
 	redisClient := redis.NewRedisClient(cfg.RedisConfig.Address)
 	repo := postgres.NewTaskRepository(pool)
 	s := service.NewTaskService(repo)
-	worker := worker.NewWorker(s, 60, redisClient)
+	worker := worker.NewWorker(s, time.Minute, redisClient)
 	worker.Start()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

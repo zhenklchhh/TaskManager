@@ -1,2 +1,2 @@
-drop table tasks
-drop table task_runs
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS task_runs;

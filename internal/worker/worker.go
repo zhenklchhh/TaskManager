@@ -55,21 +55,42 @@ func (w *Worker) workerCmd(t *time.Ticker) {
 			return
 		case <-t.C:
 			id, err := w.taskQueue.PopTask(context.Background())
-			if !errors.Is(err, redis.Nil) {
-				slog.Error("worker: failed to pop task", "error", err)
+			if err != nil{
+				if !errors.Is(err, redis.Nil) {
+					slog.Error("worker: failed to pop task", "error", err)
+				}
+				continue
+			}
+			taskUpdateCmd := &service.TaskUpdateStatusCmd{
+				ID: id,
 			}
 			task, err := w.taskService.GetTaskById(context.Background(), id)
 			if err != nil {
 				slog.Error("worker: failed to get task by id", "task_id", id, "error", err)
 				continue
 			}
-			w.executeTask(task)
+			slog.Info("worker: picked up task", "id", id)
+			taskUpdateCmd.Status = domain.TaskStatusRunning
+			if w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
+				slog.Error("worker: failed to update task status", "error", err)
+			}
+			err = w.executeTask(task)
+			if err != nil {
+				slog.Error("worker: failed to complete task", "error", err)
+				taskUpdateCmd.Status = domain.TaskStatusFailed
+			} else{
+				taskUpdateCmd.Status = domain.TaskStatusCompleted
+			}
+			if w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
+				slog.Error("worker: failed to update task status", "error", err)
+			}
 		}
 	}
 }
 
 // todo: retries
-func (w *Worker) executeTask(t *domain.Task) {
+func (w *Worker) executeTask(t *domain.Task) error {
 	slog.Info("worker: executing task", t.ID)
 	time.Sleep(500 * time.Millisecond)
+	return nil
 }

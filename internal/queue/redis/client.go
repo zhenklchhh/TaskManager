@@ -13,7 +13,7 @@ type TaskQueue interface {
 }
 
 type RedisClient struct {
-	client *redis.Client
+	Client *redis.Client
 }
 
 const (
@@ -22,21 +22,21 @@ const (
 
 func NewRedisClient(addr string) *RedisClient {
 	return &RedisClient {
-		client: redis.NewClient(&redis.Options{
+		Client: redis.NewClient(&redis.Options{
 			Addr: addr,
 		}),
 	}
 }
 
 func (rdc *RedisClient) PublishTask(ctx context.Context, taskID string) error {
-	if err := rdc.client.RPush(ctx, taskQueueName, taskID).Err(); err != nil {
+	if err := rdc.Client.RPush(ctx, taskQueueName, taskID).Err(); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (rdc *RedisClient) PopTask(ctx context.Context) (string,error) {
-	result, err := rdc.client.BLPop(ctx, 1 * time.Second, taskQueueName).Result()
+	result, err := rdc.Client.BLPop(ctx, 1 * time.Second, taskQueueName).Result()
 	if err != nil {
 		return "", err
 	}

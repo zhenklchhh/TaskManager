@@ -1,8 +1,6 @@
 package http
 
 import (
-	"time"
-
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 )
 
@@ -21,5 +19,5 @@ type TaskResponse struct {
 }
 
 type UpdateTaskInfo struct {
-	Status    domain.TaskStatus `json:"status"`
+	Status domain.TaskStatus `json:"status"`
 }
