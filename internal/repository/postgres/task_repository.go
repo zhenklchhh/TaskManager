@@ -33,14 +33,14 @@ func (r PostgresTaskRepository) Create(ctx context.Context, task *domain.Task) e
 
 func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*domain.Task, error) {
 	const q = `
-		SELECT id, title, type, payload, cron_expr, status, retry_count, max_retries, created_at, updated_at, next_run_at
+		SELECT id, title, type, payload, cron_expr, status, created_at, updated_at, next_run_at
 		FROM tasks
 		WHERE id = $1
 	`
 	var t domain.Task
 	err := r.pool.QueryRow(ctx, q, id).Scan(
-		&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status, &t.RetryCount,
-		&t.MaxRetries, &t.CreatedAt, &t.UpdatedAt, &t.NextRunAt,
+		&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status,
+		&t.CreatedAt, &t.UpdatedAt, &t.NextRunAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -50,6 +50,7 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*do
 	}
 	return &t, nil
 }
+
 // 2026/02/18 16:03:29 scheduler: error while checking upcoming tasks: can't scan into dest[0] (col: id):
 //  cannot scan uuid (OID 2950) in binary format into []string
 
@@ -66,17 +67,14 @@ func (r PostgresTaskRepository) GetScheduleTasks(ctx context.Context) ([]uuid.UU
 	}
 	defer rows.Close()
 	for rows.Next() {
-		// cant't scan uuid into string, maybe use pgtype.UUID
-		var stringID string
-		err = rows.Scan(stringID)
-		if err != nil {
+		var nextID uuid.UUID
+		if err = rows.Scan(&nextID); err != nil {
 			return nil, err
 		}
-		id, err := uuid.Parse(stringID)
-		if err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, id)
+		tasks = append(tasks, nextID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return tasks, err
 }
