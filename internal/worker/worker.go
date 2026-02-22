@@ -90,7 +90,7 @@ func (w *Worker) workerCmd(t *time.Ticker) {
 
 // todo: retries
 func (w *Worker) executeTask(t *domain.Task) error {
-	slog.Info("worker: executing task", t.ID)
+	slog.Info("worker: executing task", "id", t.ID.String())
 	time.Sleep(500 * time.Millisecond)
 	return nil
 }
