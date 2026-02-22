@@ -51,14 +51,11 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*do
 	return &t, nil
 }
 
-// 2026/02/18 16:03:29 scheduler: error while checking upcoming tasks: can't scan into dest[0] (col: id):
-//  cannot scan uuid (OID 2950) in binary format into []string
-
-func (r PostgresTaskRepository) GetScheduleTasks(ctx context.Context) ([]uuid.UUID, error) {
+func (r PostgresTaskRepository) GetPendingTasks(ctx context.Context) ([]uuid.UUID, error) {
 	const q = `
 		SELECT id
         FROM tasks
-        WHERE next_run_at <= NOW() AND status = 'scheduled'
+        WHERE next_run_at <= NOW() AND status = 'pending'
 	`
 	tasks := make([]uuid.UUID, 0)
 	rows, err := r.pool.Query(ctx, q)

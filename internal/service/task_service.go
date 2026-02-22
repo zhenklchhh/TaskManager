@@ -18,7 +18,7 @@ type TaskCreateCmd struct {
 }
 
 type TaskUpdateStatusCmd struct {
-	ID string
+	ID     string
 	Status domain.TaskStatus
 }
 
@@ -54,7 +54,7 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *TaskCreateCmd) (*doma
 		Type:       cmd.Type,
 		Payload:    []byte(cmd.Payload),
 		CronExpr:   cmd.CronExpr,
-		Status:     domain.TaskStatusScheduled,
+		Status:     domain.TaskStatusPending,
 		RetryCount: 0,
 		MaxRetries: 3,
 		CreatedAt:  now,
@@ -75,8 +75,8 @@ func (s *TaskService) GetTaskById(ctx context.Context, id string) (*domain.Task,
 	return t, nil
 }
 
-func (s *TaskService) GetScheduledTasks(ctx context.Context) ([]uuid.UUID, error) {
-	tasks, err := s.repo.GetScheduleTasks(ctx)
+func (s *TaskService) GetPendingTasks(ctx context.Context) ([]uuid.UUID, error) {
+	tasks, err := s.repo.GetPendingTasks(ctx)
 	if err != nil {
 		return nil, err
 	}
