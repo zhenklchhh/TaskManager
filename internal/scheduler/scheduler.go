@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -56,9 +57,15 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 			return
 		case <-t.C:
 			tasks := s.checkForUpcomingTasks(context.Background())
-			for _, task := range tasks {
-				err := s.taskQueue.PublishTask(context.Background(), task.String())
-				if err != nil {
+			for _, taskID := range tasks {
+				if err := s.taskQueue.PublishTask(context.Background(), taskID.String()); err != nil {
+					log.Printf("scheduler error: %v", err)
+				}
+				cmd := &service.TaskUpdateStatusCmd{
+					ID:     taskID.String(),
+					Status: domain.TaskStatusScheduled,
+				}
+				if err := s.taskService.UpdateTaskStatus(context.Background(), cmd); err != nil {
 					log.Printf("scheduler error: %v", err)
 				}
 			}
@@ -67,7 +74,7 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 }
 
 func (s *Scheduler) checkForUpcomingTasks(ctx context.Context) []uuid.UUID {
-	tasks, err := s.taskService.GetScheduledTasks(ctx)
+	tasks, err := s.taskService.GetPendingTasks(ctx)
 	if err != nil {
 		log.Printf("scheduler: error while checking upcoming tasks: %s", err)
 		return nil
