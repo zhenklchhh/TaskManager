@@ -75,12 +75,12 @@ func (s *TaskService) GetTaskById(ctx context.Context, id string) (*domain.Task,
 	return t, nil
 }
 
-func (s *TaskService) GetPendingTasks(ctx context.Context) ([]uuid.UUID, error) {
-	tasks, err := s.repo.GetPendingTasks(ctx)
+func (s *TaskService) ProcessPendingTasks(ctx context.Context, limit int, fn func([]uuid.UUID) error) error {
+	err := s.repo.GetPendingTasks(ctx, 10, fn)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return tasks, err
+	return nil
 }
 
 func (s *TaskService) UpdateTaskStatus(ctx context.Context, cmd *TaskUpdateStatusCmd) error {

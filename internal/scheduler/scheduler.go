@@ -2,13 +2,11 @@ package scheduler
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -56,28 +54,19 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 			t.Stop()
 			return
 		case <-t.C:
-			tasks := s.checkForUpcomingTasks(context.Background())
-			for _, taskID := range tasks {
-				if err := s.taskQueue.PublishTask(context.Background(), taskID.String()); err != nil {
-					log.Printf("scheduler error: %v", err)
+			err := s.taskService.ProcessPendingTasks(context.Background(), 50, func(tasks []uuid.UUID) error {
+				for _, taskID := range tasks {
+					if err := s.taskQueue.PublishTask(context.Background(), taskID.String()); err != nil {
+						slog.Error("scheduler: error scheduling tasks", "error", err)
+						// all tasks rollback to db in this return
+						return err
+					}
 				}
-				cmd := &service.TaskUpdateStatusCmd{
-					ID:     taskID.String(),
-					Status: domain.TaskStatusScheduled,
-				}
-				if err := s.taskService.UpdateTaskStatus(context.Background(), cmd); err != nil {
-					log.Printf("scheduler error: %v", err)
-				}
+				return nil
+			})
+			if err != nil {
+				slog.Error("scheduler transaction failed", "error", err)
 			}
 		}
 	}
-}
-
-func (s *Scheduler) checkForUpcomingTasks(ctx context.Context) []uuid.UUID {
-	tasks, err := s.taskService.GetPendingTasks(ctx)
-	if err != nil {
-		log.Printf("scheduler: error while checking upcoming tasks: %s", err)
-		return nil
-	}
-	return tasks
 }
