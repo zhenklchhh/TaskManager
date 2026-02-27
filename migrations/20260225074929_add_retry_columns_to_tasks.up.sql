@@ -1,0 +1,4 @@
+ALTER TABLE tasks
+ADD COLUMN retry_count INT NOT NULL DEFAULT 0,
+ADD COLUMN max_retries INT NOT NULL DEFAULT 3,
+ADD COLUMN last_error_message TEXT;

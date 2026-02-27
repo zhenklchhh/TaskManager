@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 	rdc "github.com/zhenklchhh/TaskManager/internal/queue/redis"
@@ -18,7 +19,7 @@ type Worker struct {
 	taskQueue   rdc.TaskQueue
 	timeout     time.Duration
 	done        chan struct{}
-	queuedTasks chan string
+	queuedTasks chan uuid.UUID
 	sleep       chan struct{}
 	workers     int
 	wg          sync.WaitGroup
@@ -30,7 +31,7 @@ func NewWorker(taskService *service.TaskService, timeout time.Duration, client *
 		taskService: taskService,
 		timeout:     timeout,
 		done:        make(chan struct{}),
-		queuedTasks: make(chan string),
+		queuedTasks: make(chan uuid.UUID),
 		sleep:       make(chan struct{}),
 		taskQueue:   client,
 		workers:     workerAmount,

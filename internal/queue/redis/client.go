@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
 type TaskQueue interface {
-	PublishTask(context.Context, string) error
-	PopTask(context.Context) (string, error)
+	PublishTask(context.Context, uuid.UUID) error
+	PopTask(context.Context) (uuid.UUID, error)
 }
 
 type RedisClient struct {
@@ -21,24 +22,24 @@ const (
 )
 
 func NewRedisClient(addr string) *RedisClient {
-	return &RedisClient {
+	return &RedisClient{
 		Client: redis.NewClient(&redis.Options{
 			Addr: addr,
 		}),
 	}
 }
 
-func (rdc *RedisClient) PublishTask(ctx context.Context, taskID string) error {
+func (rdc *RedisClient) PublishTask(ctx context.Context, taskID uuid.UUID) error {
 	if err := rdc.Client.RPush(ctx, taskQueueName, taskID).Err(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (rdc *RedisClient) PopTask(ctx context.Context) (string,error) {
-	result, err := rdc.Client.BLPop(ctx, 1 * time.Second, taskQueueName).Result()
+func (rdc *RedisClient) PopTask(ctx context.Context) (uuid.UUID, error) {
+	fields, err := rdc.Client.BLPop(ctx, 1*time.Second, taskQueueName).Result()
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
-	return result[1], nil
+	return uuid.Parse(fields[1])
 }

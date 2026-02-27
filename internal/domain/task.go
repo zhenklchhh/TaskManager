@@ -20,11 +20,12 @@ type Task struct {
 	ID         uuid.UUID
 	Title      string
 	Type       string
+	LastErrorMsg string
 	Payload    []byte
 	CronExpr   string
 	NextRunAt  time.Time
 	Status     TaskStatus
-	RetryCount int
+	RetryCount int	
 	MaxRetries int
 	CreatedAt  time.Time
 	UpdatedAt  time.Time

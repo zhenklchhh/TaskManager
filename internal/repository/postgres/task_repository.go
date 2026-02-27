@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"log"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -31,16 +33,17 @@ func (r PostgresTaskRepository) Create(ctx context.Context, task *domain.Task) e
 	return err
 }
 
-func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*domain.Task, error) {
+func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
 	const q = `
-		SELECT id, title, type, payload, cron_expr, status, created_at, updated_at, next_run_at
+		SELECT id, title, type, payload, cron_expr, status, created_at, retry_count, max_retries,
+		last_error_message, updated_at, next_run_at
 		FROM tasks
 		WHERE id = $1
 	`
 	var t domain.Task
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status,
-		&t.CreatedAt, &t.UpdatedAt, &t.NextRunAt,
+		&t.CreatedAt, &t.RetryCount, &t.MaxRetries, &t.LastErrorMsg, &t.UpdatedAt, &t.NextRunAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -51,10 +54,10 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id string) (*do
 	return &t, nil
 }
 
-func (r PostgresTaskRepository) GetPendingTasks(ctx context.Context, limit int, fn func([]uuid.UUID) error) error {
+func (r PostgresTaskRepository) GetPendingTasks(ctx context.Context, limit int) ([]uuid.UUID, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -65,38 +68,35 @@ func (r PostgresTaskRepository) GetPendingTasks(ctx context.Context, limit int, 
         WHERE next_run_at <= NOW() AND status = 'pending'
 		ORDER BY next_run_at
 		LIMIT $1
-		FOR UPDATE SKIP LOCK
+		FOR UPDATE SKIP LOCKED
 		)
 		UPDATE tasks
-		SET status = 'scheduled', update = NOW()
+		SET status = 'scheduled', updated_at = NOW()
 		FROM locked_rows
 		WHERE tasks.id = locked_rows.id
-		RETURNING task.id
+		RETURNING tasks.id
 
 	`
 	tasks := make([]uuid.UUID, 0)
-	rows, err := r.pool.Query(ctx, q, limit)
+	rows, err := tx.Query(ctx, q, limit)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var nextID uuid.UUID
 		if err = rows.Scan(&nextID); err != nil {
-			return err
+			return nil, err
 		}
 		tasks = append(tasks, nextID)
 	}
-	if len(tasks) == 0 {
-		return nil
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
-	if err := fn(tasks); err != nil {
-		return err
-	}
-	return tx.Commit(ctx)
+	return tasks, nil
 }
 
-func (r PostgresTaskRepository) UpdateTaskStatus(ctx context.Context, id uuid.UUID, status string) error {
+func (r PostgresTaskRepository) UpdateTaskStatus(ctx context.Context, id uuid.UUID, status domain.TaskStatus) error {
 	const q = `
 		UPDATE tasks
 		SET status = $1,
@@ -110,6 +110,23 @@ func (r PostgresTaskRepository) UpdateTaskStatus(ctx context.Context, id uuid.UU
 	}
 	if res.RowsAffected() == 0 {
 		log.Printf("Task %v status didn't updated", id)
+	}
+	return nil
+}
+
+func (r PostgresTaskRepository) UpdateTaskForRetry(ctx context.Context, id uuid.UUID, lastErrorMsg string,
+	status domain.TaskStatus, retries int, nextRunAt time.Time) error {
+	const q = `
+		UPDATE tasks
+		SET status = $1, next_run_at = $2, updated_at = NOW(), retry_count = $3, last_error_message = $4
+		WHERE id = $5
+	`
+	res, err := r.pool.Exec(ctx, q, status, nextRunAt, retries, lastErrorMsg, id)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		slog.Warn("Task have not updated for retry", "id", id)
 	}
 	return nil
 }

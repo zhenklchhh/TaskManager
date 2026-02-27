@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -31,14 +31,13 @@ func NewScheduler(taskService *service.TaskService, timeout time.Duration, clien
 
 func (s *Scheduler) Start() {
 	t := time.NewTicker(s.timeout)
-	s.wg.Wait()
 	s.wg.Add(1)
 	go s.scheduleCmd(t)
 }
 
 func (s *Scheduler) Stop() {
 	s.done <- true
-
+	s.wg.Wait()
 }
 
 func (s *Scheduler) scheduleCmd(t *time.Ticker) {
@@ -54,16 +53,16 @@ func (s *Scheduler) scheduleCmd(t *time.Ticker) {
 			t.Stop()
 			return
 		case <-t.C:
-			err := s.taskService.ProcessPendingTasks(context.Background(), 50, func(tasks []uuid.UUID) error {
-				for _, taskID := range tasks {
-					if err := s.taskQueue.PublishTask(context.Background(), taskID.String()); err != nil {
-						slog.Error("scheduler: error scheduling tasks", "error", err)
-						// all tasks rollback to db in this return
-						return err
-					}
+			tasks, err := s.taskService.ProcessPendingTasks(context.Background(), 50)
+			for _, taskID := range tasks {
+				if err := s.taskQueue.PublishTask(context.Background(), taskID); err != nil {
+					slog.Error("scheduler: error scheduling tasks", "error", err)
+					s.taskService.UpdateTaskStatus(context.Background(), &service.TaskUpdateStatusCmd{
+						ID:     taskID,
+						Status: domain.TaskStatusPending,
+					})
 				}
-				return nil
-			})
+			}
 			if err != nil {
 				slog.Error("scheduler transaction failed", "error", err)
 			}
