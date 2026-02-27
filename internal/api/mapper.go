@@ -2,14 +2,13 @@ package api
 
 import (
 	"github.com/zhenklchhh/TaskManager/internal/domain"
-	"github.com/zhenklchhh/TaskManager/internal/service"
 )
 
-func toCreateTaskCmd(t CreateTaskRequest) *service.TaskCreateCmd {
-	return &service.TaskCreateCmd{
-		Title: t.Title,
-		Type: t.Type,
-		Payload: t.Payload,
+func toCreateTaskCmd(t CreateTaskRequest) *domain.TaskCreateCmd {
+	return &domain.TaskCreateCmd{
+		Title:    t.Title,
+		Type:     t.Type,
+		Payload:  t.Payload,
 		CronExpr: t.CronExpr,
 	}
 }

@@ -102,7 +102,6 @@ func (r PostgresTaskRepository) UpdateTaskStatus(ctx context.Context, id uuid.UU
 		SET status = $1,
 		updated_at = NOW()
 		WHERE id = $2
-		FOR UPDATE SKIP LOCKED
 	`
 	res, err := r.pool.Exec(ctx, q, status, id)
 	if err != nil {

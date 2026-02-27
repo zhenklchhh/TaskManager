@@ -13,12 +13,12 @@ import (
 )
 
 type Handler struct {
-	taskService *service.TaskService
+	taskService service.TaskServiceInterface
 }
 
 var requestValidator = validator.New()
 
-func NewHandler(service *service.TaskService) *Handler {
+func NewHandler(service service.TaskServiceInterface) *Handler {
 	return &Handler{
 		taskService: service,
 	}
@@ -32,6 +32,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := requestValidator.Struct(req); err != nil {
 		handleError(domain.ErrValidation, w)
+		return
 	}
 	t, err := h.taskService.CreateTask(r.Context(), toCreateTaskCmd(req))
 	if err != nil {
@@ -56,10 +57,11 @@ func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 	taskID, err := uuid.Parse(stringID)
 	if err != nil {
 		handleError(domain.ErrValidation, w)
+		return
 	}
 	t, err := h.taskService.GetTaskById(r.Context(), taskID)
 	if err != nil {
-		handleError(domain.ErrValidation, w)
+		handleError(err, w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

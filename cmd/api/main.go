@@ -32,7 +32,7 @@ func main() {
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, cfg.DBConfig.Url)
 	if err != nil {
-		log.Error("error: ", err)
+		log.Error("failed to create pg pool", "error", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
@@ -57,7 +57,7 @@ func main() {
 	}
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error("error: ", err)
+			log.Error("http server failed", "error", err)
 			os.Exit(1)
 		}
 	}()

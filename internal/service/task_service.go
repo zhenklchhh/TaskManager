@@ -11,24 +11,9 @@ import (
 	"github.com/zhenklchhh/TaskManager/internal/repository"
 )
 
-type TaskCreateCmd struct {
-	Title    string
-	Type     string
-	Payload  string
-	CronExpr string
-}
-
-type TaskUpdateStatusCmd struct {
-	ID     uuid.UUID
-	Status domain.TaskStatus
-}
-
-type TaskUpdateForRetryCmd struct {
-	ID           uuid.UUID
-	Status       domain.TaskStatus
-	Retries      int
-	NextRunAt    time.Time
-	LastErrorMsg string
+type TaskServiceInterface interface {
+	CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd) (*domain.Task, error)
+	GetTaskById(ctx context.Context, id uuid.UUID) (*domain.Task, error)
 }
 
 type TaskService struct {
@@ -41,7 +26,7 @@ func NewTaskService(r repository.TaskRepository) *TaskService {
 	}
 }
 
-func (s *TaskService) CreateTask(ctx context.Context, cmd *TaskCreateCmd) (*domain.Task, error) {
+func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd) (*domain.Task, error) {
 	if cmd.CronExpr == "" || cmd.Type == "" || cmd.Title == "" || cmd.Payload == "" {
 		return nil, domain.ErrValidation
 	}
@@ -92,11 +77,11 @@ func (s *TaskService) ProcessPendingTasks(ctx context.Context, limit int) ([]uui
 	return tasks, nil
 }
 
-func (s *TaskService) UpdateTaskStatus(ctx context.Context, cmd *TaskUpdateStatusCmd) error {
+func (s *TaskService) UpdateTaskStatus(ctx context.Context, cmd *domain.TaskUpdateStatusCmd) error {
 	return s.repo.UpdateTaskStatus(ctx, cmd.ID, cmd.Status)
 }
 
-func (s *TaskService) UpdateTaskForRetry(ctx context.Context, cmd *TaskUpdateForRetryCmd) error {
+func (s *TaskService) UpdateTaskForRetry(ctx context.Context, cmd *domain.TaskUpdateForRetryCmd) error {
 	return s.repo.UpdateTaskForRetry(ctx, cmd.ID, cmd.LastErrorMsg, cmd.Status, cmd.Retries, cmd.NextRunAt)
 }
 
@@ -106,7 +91,7 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 		return err
 	}
 	if task.RetryCount >= task.MaxRetries {
-		return s.UpdateTaskStatus(ctx, &TaskUpdateStatusCmd{
+		return s.UpdateTaskStatus(ctx, &domain.TaskUpdateStatusCmd{
 			ID:     id,
 			Status: domain.TaskStatusFailed,
 		})
@@ -115,7 +100,7 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 	newRetriesCount := task.RetryCount + 1
 	backoff := time.Duration(math.Pow(2, float64(newRetriesCount))) * time.Minute
 	nextRunAt := time.Now().UTC().Add(backoff)
-	return s.UpdateTaskForRetry(ctx, &TaskUpdateForRetryCmd{
+	return s.UpdateTaskForRetry(ctx, &domain.TaskUpdateForRetryCmd{
 		ID:           id,
 		Status:       domain.TaskStatusPending,
 		LastErrorMsg: taskError.Error(),

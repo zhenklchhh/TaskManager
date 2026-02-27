@@ -30,7 +30,7 @@ func main() {
 	ctx := context.Background()
 	pool, err := pgxpool.New(ctx, cfg.DBConfig.Url)
 	if err != nil {
-		log.Error("error: ", err)
+		log.Error("failed to create pg pool", "error", err)
 		os.Exit(1)
 	}
 	redisClient := redis.NewRedisClient(cfg.RedisConfig.Address)
