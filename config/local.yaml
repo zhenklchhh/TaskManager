@@ -1,6 +1,6 @@
 env: "local"
 db:
-   url: "postgres://postgres:123456@localhost:5432/taskmanager_db?sslmode=disable"
+   url: "postgres://postgres:123456@localhost:5432/taskmanager-db?sslmode=disable"
 redis:
   address: "localhost:6379"
   password: ""

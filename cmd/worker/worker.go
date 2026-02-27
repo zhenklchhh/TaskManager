@@ -16,6 +16,8 @@ import (
 	"github.com/zhenklchhh/TaskManager/logger"
 )
 
+var workerAmount = 10
+
 func main() {
 	cfg := config.MustLoad()
 	log := logger.SetupLogger(cfg.Env)
@@ -34,7 +36,7 @@ func main() {
 	redisClient := redis.NewRedisClient(cfg.RedisConfig.Address)
 	repo := postgres.NewTaskRepository(pool)
 	s := service.NewTaskService(repo)
-	worker := worker.NewWorker(s, time.Minute, redisClient)
+	worker := worker.NewWorker(s, time.Minute, redisClient, workerAmount)
 	worker.Start()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
