@@ -1,9 +1,5 @@
 package api
 
-import (
-	"github.com/zhenklchhh/TaskManager/internal/domain"
-)
-
 type CreateTaskRequest struct {
 	Title    string `json:"title" validate:"required"`
 	Type     string `json:"type" validate:"required"`
@@ -16,8 +12,4 @@ type TaskResponse struct {
 	Title     string `json:"title"`
 	Status    string `json:"status"`
 	NextRunAt string `json:"next_run_at"`
-}
-
-type UpdateTaskInfo struct {
-	Status domain.TaskStatus `json:"status"`
 }

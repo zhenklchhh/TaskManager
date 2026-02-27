@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -13,6 +15,8 @@ import (
 type Handler struct {
 	taskService *service.TaskService
 }
+
+var requestValidator = validator.New()
 
 func NewHandler(service *service.TaskService) *Handler {
 	return &Handler{
@@ -25,6 +29,9 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		handleError(errors.New("invalid json"), w)
 		return
+	}
+	if err := requestValidator.Struct(req); err != nil {
+		handleError(domain.ErrValidation, w)
 	}
 	t, err := h.taskService.CreateTask(r.Context(), toCreateTaskCmd(req))
 	if err != nil {
@@ -41,14 +48,18 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
+	stringID := chi.URLParam(r, "id")
+	if stringID == "" {
 		handleError(errors.New("empty id"), w)
 		return
 	}
-	t, err := h.taskService.GetTaskById(r.Context(), id)
+	taskID, err := uuid.Parse(stringID)
 	if err != nil {
-		handleError(err, w)
+		handleError(domain.ErrValidation, w)
+	}
+	t, err := h.taskService.GetTaskById(r.Context(), taskID)
+	if err != nil {
+		handleError(domain.ErrValidation, w)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -57,29 +68,6 @@ func (h *Handler) GetTaskById(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		handleError(err, w)
 	}
-}
-
-func (h *Handler) UpdateTaskStatus(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	if id == "" {
-		handleError(errors.New("empty id"), w)
-		return
-	}
-	var req UpdateTaskInfo
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		handleError(errors.New("invalid json"), w)
-		return
-	}
-	err := h.taskService.UpdateTaskStatus(r.Context(), &service.TaskUpdateStatusCmd{
-		ID: id,
-		Status: req.Status,
-	})
-	if err != nil {
-		handleError(err, w)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func handleError(err error, w http.ResponseWriter) {
