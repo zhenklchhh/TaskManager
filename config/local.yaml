@@ -1,6 +1,6 @@
 env: "local"
 db:
-   url: "postgres://postgres:123456@localhost:5432/taskmanager-db?sslmode=disable"
+   url: "postgres://Lenovo:123456@localhost:5432/taskmanager-db?sslmode=disable"
 redis:
   address: "localhost:6379"
   password: ""
@@ -10,3 +10,9 @@ server:
   address: "localhost:8080"
   timeout: 4s
   iddle_timeout: 60s
+
+mailhog:
+  host: "localhost"
+  port: 1025
+  username: ""
+  password: ""

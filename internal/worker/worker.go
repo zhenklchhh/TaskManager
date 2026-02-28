@@ -3,38 +3,55 @@ package worker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"github.com/zhenklchhh/TaskManager/internal/config"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 	rdc "github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
+	task "github.com/zhenklchhh/TaskManager/internal/task"
 )
 
 type Worker struct {
-	taskService *service.TaskService
-	taskQueue   rdc.TaskQueue
-	timeout     time.Duration
-	done        chan struct{}
-	queuedTasks chan uuid.UUID
-	sleep       chan struct{}
-	workers     int
-	wg          sync.WaitGroup
+	taskService  *service.TaskService
+	taskQueue    rdc.TaskQueue
+	timeout      time.Duration
+	done         chan struct{}
+	queuedTasks  chan uuid.UUID
+	sleep        chan struct{}
+	workers      int
+	wg           sync.WaitGroup
+	taskHandlers map[string]task.TaskHandler
 }
 
 func NewWorker(taskService *service.TaskService, timeout time.Duration, client *rdc.RedisClient,
-	workerAmount int) *Worker {
+	workerAmount int, cfg config.MailHogConfig) *Worker {
 	return &Worker{
-		taskService: taskService,
-		timeout:     timeout,
-		done:        make(chan struct{}),
-		queuedTasks: make(chan uuid.UUID),
-		sleep:       make(chan struct{}),
-		taskQueue:   client,
-		workers:     workerAmount,
+		taskService:  taskService,
+		timeout:      timeout,
+		done:         make(chan struct{}),
+		queuedTasks:  make(chan uuid.UUID),
+		sleep:        make(chan struct{}),
+		taskQueue:    client,
+		workers:      workerAmount,
+		taskHandlers: initTaskHandlers(cfg),
+	}
+}
+
+func initTaskHandlers(cfg config.MailHogConfig) map[string]task.TaskHandler {
+	emailTaskHandler := task.NewEmailTaskHandler(
+		cfg.Host,
+		cfg.Port,
+		cfg.Username,
+		cfg.Password,
+	)
+	return map[string]task.TaskHandler{
+		task.SendEmailTask: emailTaskHandler,
 	}
 }
 
@@ -46,9 +63,6 @@ func (w *Worker) Start() {
 		go w.workerCmd()
 	}
 }
-
-// start() -> 1) pull tasks from redis with timeout when no tasks in queue -> after that start fixed amount of workers
-// with channel of tasks
 
 func (w *Worker) Stop() {
 	close(w.done)
@@ -93,7 +107,8 @@ func (w *Worker) workerCmd() {
 		case <-w.done:
 			return
 		case id := <-w.queuedTasks:
-			taskUpdateCmd := &service.TaskUpdateStatusCmd{
+
+			taskUpdateCmd := &domain.TaskUpdateStatusCmd{
 				ID: id,
 			}
 			task, err := w.taskService.GetTaskById(context.Background(), id)
@@ -103,13 +118,15 @@ func (w *Worker) workerCmd() {
 			}
 			slog.Info("worker: picked up task", "id", id)
 			taskUpdateCmd.Status = domain.TaskStatusRunning
-			if w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
+			if err = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
 				slog.Error("worker: failed to update task status", "error", err)
 			}
-			err = w.executeTask(task)
+			err = w.executeTask(context.Background(), task)
 			if err != nil {
 				slog.Error("worker: failed to complete task", "error", err)
-				taskUpdateCmd.Status = domain.TaskStatusFailed
+				taskUpdateCmd.Status = domain.TaskStatusScheduled
+				w.taskService.RetryTask(context.Background(), id, err)
+				continue
 			} else {
 				taskUpdateCmd.Status = domain.TaskStatusCompleted
 			}
@@ -120,9 +137,12 @@ func (w *Worker) workerCmd() {
 	}
 }
 
-// todo: retries
-func (w *Worker) executeTask(t *domain.Task) error {
-	slog.Info("worker: executing task", "id", t.ID.String())
-	time.Sleep(500 * time.Millisecond)
-	return nil
+func (w *Worker) executeTask(ctx context.Context, t *domain.Task) error {
+	slog.Info("worker: executing task", "type", t.Type, "title", t.Title)
+	h, ok := w.taskHandlers[t.Type]
+	if !ok {
+		slog.Error("worker: failed to execute task: unsupported task type")
+		return fmt.Errorf("unsupported task type: %s", t.Type)
+	}
+	return h.Handle(ctx, t)
 }

@@ -30,12 +30,12 @@ func NewRedisClient(addr string) *RedisClient {
 }
 
 func (rdc *RedisClient) PublishTask(ctx context.Context, taskID uuid.UUID) error {
-	if err := rdc.Client.RPush(ctx, taskQueueName, taskID).Err(); err != nil {
+	if err := rdc.Client.RPush(ctx, taskQueueName, taskID.String()).Err(); err != nil {
 		return err
 	}
 	return nil
 }
-
+// Popping task there is a chance to get error. implement rollback to redis task
 func (rdc *RedisClient) PopTask(ctx context.Context) (uuid.UUID, error) {
 	fields, err := rdc.Client.BLPop(ctx, 1*time.Second, taskQueueName).Result()
 	if err != nil {

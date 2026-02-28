@@ -36,7 +36,7 @@ func (r PostgresTaskRepository) Create(ctx context.Context, task *domain.Task) e
 func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
 	const q = `
 		SELECT id, title, type, payload, cron_expr, status, created_at, retry_count, max_retries,
-		last_error_message, updated_at, next_run_at
+		COALESCE(last_error_message, '') AS last_error_message, updated_at, next_run_at
 		FROM tasks
 		WHERE id = $1
 	`

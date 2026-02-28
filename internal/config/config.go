@@ -12,6 +12,7 @@ type Config struct {
 	Env         string     `yaml:"env" env-default:"local"`
 	DBConfig DBConfig `yaml:"db"`
 	RedisConfig RedisConfig `yaml:"redis"`
+	MailHogConfig MailHogConfig `yaml:"mailhog"`
 	Server      HTTPServer `yaml:"server"`
 }
 
@@ -29,6 +30,13 @@ type RedisConfig struct {
 	Address string `yaml:"address" env:"REDIS_ADDR"`
 	Password string `yaml:"password" env:"REDIS_PASSWORD"`
 	DB string `yaml:"database" env:"REDIS_DATABASE"`
+}
+
+type MailHogConfig struct {
+	Host string `yaml:"host"`
+	Port int `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 func MustLoad() Config {

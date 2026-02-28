@@ -60,7 +60,6 @@ func TestCreateTask(t *testing.T) {
 		{
 			name: "validation error - invalid cron",
 			body: `{"title":"test task","type":"email","payload":"{\"to\":\"user@example.com\"}","cron_expr":"not-a-cron"}`,
-			// сервис должен вернуть ErrInvalidCron, а хендлер отдать 400
 			serviceErr:     domain.ErrInvalidCron,
 			expectedStatus: http.StatusBadRequest,
 			expectedBody:   "invalid cron expression\n",

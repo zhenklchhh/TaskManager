@@ -4,7 +4,7 @@ type CreateTaskRequest struct {
 	Title    string `json:"title" validate:"required"`
 	Type     string `json:"type" validate:"required"`
 	Payload  string `json:"payload" validate:"required"`
-	CronExpr string
+	CronExpr string `json:"cron_expr"`
 }
 
 type TaskResponse struct {
