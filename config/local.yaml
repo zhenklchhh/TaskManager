@@ -6,6 +6,9 @@ redis:
   password: ""
   database: 0
 
+scheduler:
+  stale-task-threshold: 2m
+
 server:
   address: "localhost:8080"
   timeout: 4s

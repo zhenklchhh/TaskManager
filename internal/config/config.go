@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	Env         string     `yaml:"env" env-default:"local"`
-	DBConfig DBConfig `yaml:"db"`
-	RedisConfig RedisConfig `yaml:"redis"`
-	MailHogConfig MailHogConfig `yaml:"mailhog"`
-	Server      HTTPServer `yaml:"server"`
+	Env             string        `yaml:"env" env-default:"local"`
+	DBConfig        DBConfig      `yaml:"db"`
+	RedisConfig     RedisConfig   `yaml:"redis"`
+	MailHogConfig   MailHogConfig `yaml:"mailhog"`
+	SchedulerConfig `yaml:"scheduler"`
+	Server          HTTPServer `yaml:"server"`
 }
 
 type HTTPServer struct {
@@ -27,16 +28,20 @@ type DBConfig struct {
 }
 
 type RedisConfig struct {
-	Address string `yaml:"address" env:"REDIS_ADDR"`
+	Address  string `yaml:"address" env:"REDIS_ADDR"`
 	Password string `yaml:"password" env:"REDIS_PASSWORD"`
-	DB string `yaml:"database" env:"REDIS_DATABASE"`
+	DB       string `yaml:"database" env:"REDIS_DATABASE"`
 }
 
 type MailHogConfig struct {
-	Host string `yaml:"host"`
-	Port int `yaml:"port"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+}
+
+type SchedulerConfig struct {
+	StaleTaskThreshold time.Duration `yaml:"stale-task-threshold" env:"STALE_TASK_THRESHOLD"`
 }
 
 func MustLoad() Config {

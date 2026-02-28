@@ -107,5 +107,8 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 		Retries:      newRetriesCount,
 		NextRunAt:    nextRunAt,
 	})
+}
 
+func (s *TaskService) UpdateStaleTasksToPending(ctx context.Context, threshold time.Duration) (int, error) {
+	return s.repo.UpdateStaleTasksToPending(ctx, threshold)
 }

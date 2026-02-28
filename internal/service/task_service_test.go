@@ -21,18 +21,20 @@ type stubRepository struct {
 
 	updateTaskForRetryFn func(ctx context.Context, id uuid.UUID, lastErrorMsg string, status domain.TaskStatus, retries int, nextRunAt time.Time) error
 
+	updateStaleTasksToPendingFn func(ctx context.Context, threshold time.Duration) (int, error)
+
 	createCalled int
 	created      *domain.Task
 
 	updateStatusCalled int
-	updatedStatusID     uuid.UUID
-	updatedStatus       domain.TaskStatus
+	updatedStatusID    uuid.UUID
+	updatedStatus      domain.TaskStatus
 
-	updateForRetryCalled int
-	updateForRetryID     uuid.UUID
-	updateForRetryStatus domain.TaskStatus
-	updateForRetryRetries int
-	updateForRetryNextRunAt time.Time
+	updateForRetryCalled       int
+	updateForRetryID           uuid.UUID
+	updateForRetryStatus       domain.TaskStatus
+	updateForRetryRetries      int
+	updateForRetryNextRunAt    time.Time
 	updateForRetryLastErrorMsg string
 }
 
@@ -82,6 +84,13 @@ func (s *stubRepository) UpdateTaskForRetry(ctx context.Context, id uuid.UUID, l
 	return nil
 }
 
+func (s *stubRepository) UpdateStaleTasksToPending (ctx context.Context, threshold time.Duration) (int, error) {
+	if s.updateStaleTasksToPendingFn != nil {
+		return s.updateStaleTasksToPendingFn(ctx, threshold)
+	}
+	return 0, nil
+}
+
 func TestTaskService_CreateTask(t *testing.T) {
 	t.Parallel()
 
@@ -89,8 +98,8 @@ func TestTaskService_CreateTask(t *testing.T) {
 		name string
 		cmd  *domain.TaskCreateCmd
 
-		repoErr error
-		wantErr error
+		repoErr          error
+		wantErr          error
 		wantCreateCalled bool
 	}
 

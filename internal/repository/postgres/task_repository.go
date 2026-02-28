@@ -129,3 +129,23 @@ func (r PostgresTaskRepository) UpdateTaskForRetry(ctx context.Context, id uuid.
 	}
 	return nil
 }
+
+func (r PostgresTaskRepository) UpdateStaleTasksToPending(ctx context.Context,
+	threshold time.Duration) (int, error) {
+	olderThan := time.Now().UTC().Add(-threshold)
+	const q = `
+		WITH updated_rows AS (
+			UPDATE tasks
+			SET status = 'pending', updated_at = NOW(), next_run_at = NOW() + INTERVAL '1 minute'
+			WHERE updated_at < $1
+			RETURNING 1
+		)
+		SELECT COUNT(*) FROM updated_rows
+	`
+	var rowsAffected int
+	err := r.pool.QueryRow(ctx, q, olderThan).Scan(&rowsAffected)
+	if err != nil {
+		return 0, err
+	}
+	return rowsAffected, nil
+}

@@ -45,7 +45,7 @@ func main() {
 		})
 	scheduler := scheduler.NewScheduler(s, time.Minute, &appRedis.RedisClient{
 		Client: redisClient,
-	})
+	}, cfg.SchedulerConfig.StaleTaskThreshold)
 	scheduler.Start()
 	server := &http.Server{
 		Addr:              cfg.Server.Address,
