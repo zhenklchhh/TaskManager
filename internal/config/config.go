@@ -9,12 +9,13 @@ import (
 )
 
 type Config struct {
-	Env             string        `yaml:"env" env-default:"local"`
-	DBConfig        DBConfig      `yaml:"db"`
-	RedisConfig     RedisConfig   `yaml:"redis"`
-	MailHogConfig   MailHogConfig `yaml:"mailhog"`
-	SchedulerConfig `yaml:"scheduler"`
-	Server          HTTPServer `yaml:"server"`
+	Env                   string          `yaml:"env" env-default:"local"`
+	DBConfig              DBConfig        `yaml:"db"`
+	RedisConfig           RedisConfig     `yaml:"redis"`
+	MailHogConfig         MailHogConfig   `yaml:"mailhog"`
+	SchedulerConfig       SchedulerConfig `yaml:"scheduler"`
+	Server                HTTPServer      `yaml:"server"`
+	DefaultTaskMaxRetries int             `yaml:"default-max-retries" env-default:"3"`
 }
 
 type HTTPServer struct {

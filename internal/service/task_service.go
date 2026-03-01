@@ -17,12 +17,14 @@ type TaskServiceInterface interface {
 }
 
 type TaskService struct {
-	repo repository.TaskRepository
+	repo                  repository.TaskRepository
+	defaultTaskMaxRetries int
 }
 
-func NewTaskService(r repository.TaskRepository) *TaskService {
+func NewTaskService(r repository.TaskRepository, maxRetries int) *TaskService {
 	return &TaskService{
-		repo: r,
+		repo:                  r,
+		defaultTaskMaxRetries: maxRetries,
 	}
 }
 
@@ -35,25 +37,39 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd)
 	if err != nil {
 		return nil, domain.ErrInvalidCron
 	}
+
+	var (
+		maxRetries int
+		expiresAt  *time.Time
+	)
+
+	if cmd.MaxRetries == nil {
+		maxRetries = s.defaultTaskMaxRetries
+	} else {
+		maxRetries = *cmd.MaxRetries
+	}
+
+	if cmd.ExpiresAt != nil {
+		expiresAt = cmd.ExpiresAt
+	}
+
 	now := time.Now()
 	nextAt := sch.Next(now)
 
-	uuid, err := uuid.NewUUID()
-	if err != nil {
-		return nil, err
-	}
+	id := uuid.New()
 	t := &domain.Task{
-		ID:         uuid,
+		ID:         id,
 		Title:      cmd.Title,
 		Type:       cmd.Type,
 		Payload:    []byte(cmd.Payload),
 		CronExpr:   cmd.CronExpr,
 		Status:     domain.TaskStatusPending,
 		RetryCount: 0,
-		MaxRetries: 3,
+		MaxRetries: maxRetries,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		NextRunAt:  nextAt,
+		ExpiresAt:  expiresAt,
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, err

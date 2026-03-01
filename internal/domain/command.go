@@ -7,10 +7,12 @@ import (
 )
 
 type TaskCreateCmd struct {
-	Title    string
-	Type     string
-	Payload  string
-	CronExpr string
+	Title      string
+	Type       string
+	Payload    string
+	CronExpr   string
+	MaxRetries *int
+	ExpiresAt  *time.Time
 }
 
 type TaskUpdateStatusCmd struct {

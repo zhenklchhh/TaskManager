@@ -17,16 +17,17 @@ const (
 )
 
 type Task struct {
-	ID         uuid.UUID
-	Title      string
-	Type       string
+	ID           uuid.UUID
+	Title        string
+	Type         string
 	LastErrorMsg string
-	Payload    []byte
-	CronExpr   string
-	NextRunAt  time.Time
-	Status     TaskStatus
-	RetryCount int	
-	MaxRetries int
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	Payload      []byte
+	CronExpr     string
+	NextRunAt    time.Time
+	Status       TaskStatus
+	RetryCount   int
+	MaxRetries   int
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	ExpiresAt    *time.Time
 }

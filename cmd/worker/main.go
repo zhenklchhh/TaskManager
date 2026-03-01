@@ -35,7 +35,7 @@ func main() {
 	}
 	redisClient := redis.NewRedisClient(cfg.RedisConfig.Address)
 	repo := postgres.NewTaskRepository(pool)
-	s := service.NewTaskService(repo)
+	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
 	worker := worker.NewWorker(s, time.Minute, redisClient, workerAmount, cfg.MailHogConfig)
 	worker.Start()
 	stop := make(chan os.Signal, 1)

@@ -91,6 +91,8 @@ func (s *stubRepository) UpdateStaleTasksToPending (ctx context.Context, thresho
 	return 0, nil
 }
 
+const defaultTaskMaxRetries = 3
+
 func TestTaskService_CreateTask(t *testing.T) {
 	t.Parallel()
 
@@ -158,7 +160,7 @@ func TestTaskService_CreateTask(t *testing.T) {
 					return tt.repoErr
 				},
 			}
-			svc := NewTaskService(repo)
+			svc := NewTaskService(repo, defaultTaskMaxRetries)
 
 			now := time.Now()
 			task, err := svc.CreateTask(context.Background(), tt.cmd)
@@ -232,7 +234,7 @@ func TestTaskService_ProcessPendingTasks(t *testing.T) {
 			return want, nil
 		},
 	}
-	svc := NewTaskService(repo)
+	svc := NewTaskService(repo, defaultTaskMaxRetries)
 
 	got, err := svc.ProcessPendingTasks(context.Background(), 50)
 	if err != nil {
@@ -257,7 +259,7 @@ func TestTaskService_RetryTask(t *testing.T) {
 				return nil, domain.ErrTaskNotFound
 			},
 		}
-		svc := NewTaskService(repo)
+		svc := NewTaskService(repo, defaultTaskMaxRetries)
 
 		err := svc.RetryTask(context.Background(), uuid.New(), errors.New("boom"))
 		if !errors.Is(err, domain.ErrTaskNotFound) {
@@ -279,7 +281,7 @@ func TestTaskService_RetryTask(t *testing.T) {
 				}, nil
 			},
 		}
-		svc := NewTaskService(repo)
+		svc := NewTaskService(repo, defaultTaskMaxRetries)
 
 		err := svc.RetryTask(context.Background(), id, errors.New("boom"))
 		if err != nil {
@@ -312,7 +314,7 @@ func TestTaskService_RetryTask(t *testing.T) {
 				}, nil
 			},
 		}
-		svc := NewTaskService(repo)
+		svc := NewTaskService(repo, defaultTaskMaxRetries)
 
 		start := time.Now().UTC()
 		err := svc.RetryTask(context.Background(), id, taskErr)

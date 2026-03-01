@@ -37,7 +37,7 @@ func main() {
 	}
 	defer pool.Close()
 	repo := postgres.NewTaskRepository(pool)
-	s := service.NewTaskService(repo)
+	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
 	h := api.NewHandler(s)
 	r := api.Routes(h)
 	redisClient := redis.NewClient(&redis.Options{

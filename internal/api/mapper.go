@@ -19,5 +19,6 @@ func toTaskResponse(t *domain.Task) *TaskResponse {
 		t.Title,
 		string(t.Status),
 		t.NextRunAt.String(),
+		t.Type,
 	}
 }
