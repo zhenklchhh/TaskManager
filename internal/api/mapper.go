@@ -6,10 +6,12 @@ import (
 
 func toCreateTaskCmd(t CreateTaskRequest) *domain.TaskCreateCmd {
 	return &domain.TaskCreateCmd{
-		Title:    t.Title,
-		Type:     t.Type,
-		Payload:  t.Payload,
-		CronExpr: t.CronExpr,
+		Title:      t.Title,
+		Type:       t.Type,
+		Payload:    t.Payload,
+		CronExpr:   t.CronExpr,
+		MaxRetries: t.MaxRetries,
+		ExpiresAt:  t.ExpiresAt,
 	}
 }
 

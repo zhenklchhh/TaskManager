@@ -338,8 +338,8 @@ func TestTaskService_RetryTask(t *testing.T) {
 			t.Fatalf("expected last error %q, got %q", taskErr.Error(), repo.updateForRetryLastErrorMsg)
 		}
 
-		wantMin := start.Add(2 * time.Minute).Add(-2 * time.Second)
-		wantMax := start.Add(2 * time.Minute).Add(10 * time.Second)
+		wantMin := start.Add(time.Minute)
+		wantMax := start.Add(2 * time.Minute)
 		if repo.updateForRetryNextRunAt.Before(wantMin) || repo.updateForRetryNextRunAt.After(wantMax) {
 			t.Fatalf("unexpected next_run_at: got=%v expected between %v and %v", repo.updateForRetryNextRunAt, wantMin, wantMax)
 		}

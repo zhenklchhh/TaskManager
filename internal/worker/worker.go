@@ -117,6 +117,16 @@ func (w *Worker) workerCmd() {
 				continue
 			}
 			slog.Info("worker: picked up task", "id", id)
+
+			if task.ExpiresAt != nil && task.ExpiresAt.Before(time.Now()) {
+				slog.Warn("worker: task expired, marking as failed", "id", id, "expired_at", task.ExpiresAt)
+				taskUpdateCmd.Status = domain.TaskStatusFailed
+				if err := w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
+					slog.Error("worker: failed to update expired task status", "error", err)
+				}
+				continue
+			}
+
 			taskUpdateCmd.Status = domain.TaskStatusRunning
 			if err = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
 				slog.Error("worker: failed to update task status", "error", err)
@@ -130,7 +140,7 @@ func (w *Worker) workerCmd() {
 			} else {
 				taskUpdateCmd.Status = domain.TaskStatusCompleted
 			}
-			if w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
+			if err = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
 				slog.Error("worker: failed to update task status", "error", err)
 			}
 		}

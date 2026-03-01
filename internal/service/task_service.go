@@ -110,20 +110,20 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 	}
 	if task.RetryCount >= task.MaxRetries {
 		slog.Error(
-        "Task failed after reaching max retries", "id", id.String(),
-        "retries", task.MaxRetries,
-        "error", taskError.Error(),
-    )
+			"Task failed after reaching max retries", "id", id.String(),
+			"retries", task.MaxRetries,
+			"error", taskError.Error(),
+		)
 		return s.UpdateTaskStatus(ctx, &domain.TaskUpdateStatusCmd{
-		ID:           id,
-		Status:       domain.TaskStatusFailed,
-		LastErrorMsg: taskError.Error(),
-	})
+			ID:           id,
+			Status:       domain.TaskStatusFailed,
+			LastErrorMsg: taskError.Error(),
+		})
 	}
 	newRetriesCount := task.RetryCount + 1
-	
+
 	backoffSeconds := math.Pow(2, float64(newRetriesCount)) * 60
-	const maxBackoffSeconds = 3600 
+	const maxBackoffSeconds = 3600
 	if backoffSeconds > maxBackoffSeconds {
 		backoffSeconds = maxBackoffSeconds
 	}
@@ -133,7 +133,7 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 	}
 	jitter := rand.Int63n(base)
 	finalSeconds := base + jitter
-	nextRunAt := time.Now().UTC().Add(time.Duration(finalSeconds))
+	nextRunAt := time.Now().UTC().Add(time.Duration(finalSeconds) * time.Second)
 	return s.UpdateTaskForRetry(ctx, &domain.TaskUpdateForRetryCmd{
 		ID:           id,
 		Status:       domain.TaskStatusPending,
