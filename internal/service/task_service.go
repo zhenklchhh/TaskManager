@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"log/slog"
 	"math"
+	"math/rand"
 	"time"
 
 	"github.com/google/uuid"
@@ -107,15 +109,31 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 		return err
 	}
 	if task.RetryCount >= task.MaxRetries {
+		slog.Error(
+        "Task failed after reaching max retries", "id", id.String(),
+        "retries", task.MaxRetries,
+        "error", taskError.Error(),
+    )
 		return s.UpdateTaskStatus(ctx, &domain.TaskUpdateStatusCmd{
-			ID:     id,
-			Status: domain.TaskStatusFailed,
-		})
+		ID:           id,
+		Status:       domain.TaskStatusFailed,
+		LastErrorMsg: taskError.Error(),
+	})
 	}
-
 	newRetriesCount := task.RetryCount + 1
-	backoff := time.Duration(math.Pow(2, float64(newRetriesCount))) * time.Minute
-	nextRunAt := time.Now().UTC().Add(backoff)
+	
+	backoffSeconds := math.Pow(2, float64(newRetriesCount)) * 60
+	const maxBackoffSeconds = 3600 
+	if backoffSeconds > maxBackoffSeconds {
+		backoffSeconds = maxBackoffSeconds
+	}
+	base := int64(backoffSeconds / 2)
+	if base < 1 {
+		base = 1
+	}
+	jitter := rand.Int63n(base)
+	finalSeconds := base + jitter
+	nextRunAt := time.Now().UTC().Add(time.Duration(finalSeconds))
 	return s.UpdateTaskForRetry(ctx, &domain.TaskUpdateForRetryCmd{
 		ID:           id,
 		Status:       domain.TaskStatusPending,

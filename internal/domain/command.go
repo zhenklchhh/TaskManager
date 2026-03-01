@@ -16,8 +16,9 @@ type TaskCreateCmd struct {
 }
 
 type TaskUpdateStatusCmd struct {
-	ID     uuid.UUID
-	Status TaskStatus
+	ID           uuid.UUID
+	Status       TaskStatus
+	LastErrorMsg string
 }
 
 type TaskUpdateForRetryCmd struct {
