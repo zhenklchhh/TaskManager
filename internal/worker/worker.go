@@ -66,7 +66,18 @@ func (w *Worker) Start() {
 
 func (w *Worker) Stop() {
 	close(w.done)
-	w.wg.Wait()
+
+	done := make(chan struct{})
+	go func() {
+		w.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		slog.Info("worker: graceful shutdown")
+	case <-time.After(30 * time.Second):
+		slog.Error("worker: forced shutdown timeout exceeded")
+	}
 }
 
 func (w *Worker) pullTasksFromRedis() {
