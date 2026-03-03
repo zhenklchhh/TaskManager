@@ -80,6 +80,8 @@ func handleError(err error, w http.ResponseWriter) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	case errors.Is(err, domain.ErrTaskNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)
+	case errors.Is(err, domain.ErrMaxRetriesExceeded):
+		http.Error(w, err.Error(), http.StatusGone)
 	default:
 		http.Error(w, "internal error", http.StatusInternalServerError)
 	}

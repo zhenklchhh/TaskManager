@@ -117,7 +117,7 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 		return s.UpdateTaskStatus(ctx, &domain.TaskUpdateStatusCmd{
 			ID:           id,
 			Status:       domain.TaskStatusFailed,
-			LastErrorMsg: taskError.Error(),
+			LastErrorMsg: domain.ErrMaxRetriesExceeded.Error(),
 		})
 	}
 	newRetriesCount := task.RetryCount + 1
