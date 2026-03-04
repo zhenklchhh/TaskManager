@@ -8,6 +8,13 @@ require (
 )
 
 require (
+	github.com/jhump/protoreflect/v2 v2.0.0-beta.2 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
+)
+
+require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
@@ -29,6 +36,7 @@ require (
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
+	google.golang.org/grpc v1.79.1
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

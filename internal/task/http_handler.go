@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/zhenklchhh/TaskManager/internal/domain"
@@ -42,7 +43,7 @@ func (h *HttpHandler) Handle(ctx context.Context, t *domain.Task) error {
 	}
 	if payload.TimeoutSeconds > 0 {
 		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, time.Duration(payload.TimeoutSeconds) * time.Second)
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(payload.TimeoutSeconds)*time.Second)
 		defer cancel()
 	}
 	var body io.Reader
@@ -65,14 +66,12 @@ func (h *HttpHandler) Handle(ctx context.Context, t *domain.Task) error {
 		return httpHandlerError(err)
 	}
 	defer resp.Body.Close()
-	for _, status := range payload.RetryOnStatuses {
-		if resp.StatusCode == status {
-			return fmt.Errorf("http error: %d", resp.StatusCode)
-		}
+	if slices.Contains(payload.RetryOnStatuses, resp.StatusCode) {
+		return fmt.Errorf("http error: %d", resp.StatusCode)
 	}
 	return nil
 }
 
 func httpHandlerError(err error) error {
-	return fmt.Errorf("http handler error: ", err)
+	return fmt.Errorf("http handler error: %v", err)
 }
