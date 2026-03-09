@@ -36,13 +36,19 @@ func main() {
 		os.Exit(1)
 	}
 	defer pool.Close()
+	
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisConfig.Address,
+	})
+	
 	repo := postgres.NewTaskRepository(pool)
 	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
 	h := api.NewHandler(s)
-	r := api.Routes(h)
-	redisClient := redis.NewClient(&redis.Options{
-			Addr: cfg.RedisConfig.Address,
-		})
+	
+	// Create health checker
+	healthChecker := api.NewHealthChecker(pool, redisClient)
+	
+	r := api.Routes(h, healthChecker)
 	scheduler := scheduler.NewScheduler(s, time.Minute, &appRedis.RedisClient{
 		Client: redisClient,
 	}, cfg.SchedulerConfig.StaleTaskThreshold)
