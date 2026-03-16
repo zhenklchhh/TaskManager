@@ -50,8 +50,10 @@ func initTaskHandlers(cfg config.MailHogConfig) map[string]task.TaskHandler {
 		cfg.Username,
 		cfg.Password,
 	)
+	webhookTaskHandler := task.NewWebhookTaskHandler()
 	return map[string]task.TaskHandler{
-		task.SendEmailTask: emailTaskHandler,
+		task.SendEmailTask:   emailTaskHandler,
+		task.SendWebhookTask: webhookTaskHandler,
 	}
 }
 

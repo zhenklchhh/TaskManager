@@ -81,6 +81,61 @@ var (
 			Help: "Total number of scheduler errors",
 		},
 	)
+
+	// Worker metrics
+	workersActive = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "workers_active",
+			Help: "Number of active workers",
+		},
+	)
+
+	workerTasksProcessed = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "worker_tasks_processed_total",
+			Help: "Total number of tasks processed by workers",
+		},
+		[]string{"worker_id", "status"},
+	)
+
+	// Priority queue metrics
+	queueLengthByPriority = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "queue_length_by_priority",
+			Help: "Number of tasks in queue by priority",
+		},
+		[]string{"priority"},
+	)
+
+	tasksProcessedByPriority = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "tasks_processed_by_priority_total",
+			Help: "Total number of tasks processed by priority",
+		},
+		[]string{"priority", "status"},
+	)
+
+	// Semaphore metrics
+	semaphoreAcquired = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "semaphore_acquired_total",
+			Help: "Total number of semaphore acquisitions",
+		},
+	)
+
+	semaphoreReleased = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Name: "semaphore_released_total",
+			Help: "Total number of semaphore releases",
+		},
+	)
+
+	semaphoreSlots = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "semaphore_slots_available",
+			Help: "Number of available semaphore slots",
+		},
+	)
 )
 
 // HTTP metrics functions
@@ -122,4 +177,35 @@ func RecordSchedulerRun() {
 
 func RecordSchedulerError() {
 	schedulerErrorsTotal.Inc()
+}
+
+// Worker metrics functions
+func SetWorkersActive(count float64) {
+	workersActive.Set(count)
+}
+
+func RecordWorkerTaskProcessed(workerID, status string) {
+	workerTasksProcessed.WithLabelValues(workerID, status).Inc()
+}
+
+// Priority queue metrics functions
+func SetQueueLengthByPriority(priority string, length float64) {
+	queueLengthByPriority.WithLabelValues(priority).Set(length)
+}
+
+func RecordTaskProcessedByPriority(priority, status string) {
+	tasksProcessedByPriority.WithLabelValues(priority, status).Inc()
+}
+
+// Semaphore metrics functions
+func RecordSemaphoreAcquired() {
+	semaphoreAcquired.Inc()
+}
+
+func RecordSemaphoreReleased() {
+	semaphoreReleased.Inc()
+}
+
+func SetSemaphoreSlotsAvailable(slots float64) {
+	semaphoreSlots.Set(slots)
 }

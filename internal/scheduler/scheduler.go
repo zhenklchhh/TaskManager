@@ -59,7 +59,13 @@ func (s *Scheduler) schedulePendingTasksCycle(t *time.Ticker) {
 		case <-t.C:
 			tasks, err := s.taskService.ProcessPendingTasks(context.Background(), 50)
 			for _, taskID := range tasks {
-				if err := s.taskQueue.PublishTask(context.Background(), taskID); err != nil {
+				task, getErr := s.taskService.GetTaskById(context.Background(), taskID)
+				if getErr != nil {
+					slog.Error("scheduler: failed to get task", "task_id", taskID, "error", getErr)
+					continue
+				}
+				
+				if err := s.taskQueue.PublishTaskWithPriority(context.Background(), taskID, task.Priority); err != nil {
 					slog.Error("scheduler: error scheduling tasks", "error", err)
 					s.taskService.UpdateTaskStatus(context.Background(), &domain.TaskUpdateStatusCmd{
 						ID:     taskID,

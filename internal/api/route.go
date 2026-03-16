@@ -4,7 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func Routes(h *Handler, healthChecker *HealthChecker) chi.Router {
+func Routes(h *Handler, healthChecker *HealthChecker, dashboardHandler *DashboardHandler) chi.Router {
 	r := chi.NewRouter()
 	
 	// Add metrics middleware
@@ -21,6 +21,10 @@ func Routes(h *Handler, healthChecker *HealthChecker) chi.Router {
 		r.Route("/v1", func(r chi.Router){
 			r.Post("/tasks", h.CreateTask)
 			r.Get("/tasks/{id}", h.GetTaskById)
+			
+			// Dashboard endpoints
+			r.Get("/dashboard/stats", dashboardHandler.GetStats)
+			r.Get("/dashboard/tasks", dashboardHandler.GetTasks)
 		})
 	})
 	return r

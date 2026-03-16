@@ -42,6 +42,7 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd)
 
 	var (
 		maxRetries int
+		priority   int
 		expiresAt  *time.Time
 	)
 
@@ -49,6 +50,18 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd)
 		maxRetries = s.defaultTaskMaxRetries
 	} else {
 		maxRetries = *cmd.MaxRetries
+	}
+
+	if cmd.Priority == nil {
+		priority = 5
+	} else {
+		priority = *cmd.Priority
+		if priority < 1 {
+			priority = 1
+		}
+		if priority > 10 {
+			priority = 10
+		}
 	}
 
 	if cmd.ExpiresAt != nil {
@@ -68,6 +81,7 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd)
 		Status:     domain.TaskStatusPending,
 		RetryCount: 0,
 		MaxRetries: maxRetries,
+		Priority:   priority,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 		NextRunAt:  nextAt,
@@ -145,4 +159,16 @@ func (s *TaskService) RetryTask(ctx context.Context, id uuid.UUID, taskError err
 
 func (s *TaskService) UpdateStaleTasksToPending(ctx context.Context, threshold time.Duration) (int, error) {
 	return s.repo.UpdateStaleTasksToPending(ctx, threshold)
+}
+
+func (s *TaskService) GetTaskStats(ctx context.Context) (*domain.TaskStats, error) {
+	return s.repo.GetTaskStats(ctx)
+}
+
+func (s *TaskService) GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error) {
+	return s.repo.GetAllTasks(ctx, limit, offset, status)
+}
+
+func (s *TaskService) GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error) {
+	return s.repo.GetTaskCount(ctx, status)
 }

@@ -12,6 +12,7 @@ type TaskCreateCmd struct {
 	Payload    string
 	CronExpr   string
 	MaxRetries *int
+	Priority   *int
 	ExpiresAt  *time.Time
 }
 

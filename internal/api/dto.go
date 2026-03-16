@@ -8,6 +8,7 @@ type CreateTaskRequest struct {
 	Payload    string     `json:"payload" validate:"required"`
 	CronExpr   string     `json:"cron_expr" validate:"required"`
 	MaxRetries *int       `json:"max_retries,omitempty"`
+	Priority   *int       `json:"priority,omitempty"`
 	ExpiresAt  *time.Time `json:"expires_at,omitempty"`
 }
 

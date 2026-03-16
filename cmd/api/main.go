@@ -44,11 +44,12 @@ func main() {
 	repo := postgres.NewTaskRepository(pool)
 	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
 	h := api.NewHandler(s)
+	dashboardHandler := api.NewDashboardHandler(s)
 	
 	// Create health checker
 	healthChecker := api.NewHealthChecker(pool, redisClient)
 	
-	r := api.Routes(h, healthChecker)
+	r := api.Routes(h, healthChecker, dashboardHandler)
 	scheduler := scheduler.NewScheduler(s, time.Minute, &appRedis.RedisClient{
 		Client: redisClient,
 	}, cfg.SchedulerConfig.StaleTaskThreshold)

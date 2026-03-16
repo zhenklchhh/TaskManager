@@ -11,6 +11,7 @@ func toCreateTaskCmd(t CreateTaskRequest) *domain.TaskCreateCmd {
 		Payload:    t.Payload,
 		CronExpr:   t.CronExpr,
 		MaxRetries: t.MaxRetries,
+		Priority:   t.Priority,
 		ExpiresAt:  t.ExpiresAt,
 	}
 }

@@ -16,4 +16,7 @@ type TaskRepository interface {
 	UpdateTaskForRetry(ctx context.Context, id uuid.UUID, lastErrorMsg string, status domain.TaskStatus, retries int,
 		nextRunAt time.Time) error
 	UpdateStaleTasksToPending(ctx context.Context, threshold time.Duration) (int, error)
+	GetTaskStats(ctx context.Context) (*domain.TaskStats, error)
+	GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error)
+	GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error)
 }

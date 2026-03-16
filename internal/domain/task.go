@@ -27,6 +27,7 @@ type Task struct {
 	Status       TaskStatus
 	RetryCount   int
 	MaxRetries   int
+	Priority     int
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	ExpiresAt    *time.Time

@@ -24,13 +24,13 @@ func NewTaskRepository(pool *pgxpool.Pool) repository.TaskRepository {
 
 func (r PostgresTaskRepository) Create(ctx context.Context, task *domain.Task) error {
 	const query = `
-		INSERT INTO tasks (id, title, type, payload, cron_expr, status, max_retries, created_at, next_run_at,
+		INSERT INTO tasks (id, title, type, payload, cron_expr, status, max_retries, priority, created_at, next_run_at,
 		expires_at)
-		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	_, err := r.pool.Exec(ctx, query,
 		task.ID, task.Title, task.Type, task.Payload, task.CronExpr, task.Status, task.MaxRetries,
-		task.CreatedAt, task.NextRunAt, task.ExpiresAt,
+		task.Priority, task.CreatedAt, task.NextRunAt, task.ExpiresAt,
 	)
 	return err
 }
@@ -38,7 +38,7 @@ func (r PostgresTaskRepository) Create(ctx context.Context, task *domain.Task) e
 func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
 	const q = `
 		SELECT id, title, type, payload, cron_expr, status, created_at, retry_count, max_retries,
-		COALESCE(last_error_message, '') AS last_error_message, updated_at, next_run_at, expires_at
+		COALESCE(last_error_message, '') AS last_error_message, updated_at, next_run_at, expires_at, priority
 		FROM tasks
 		WHERE id = $1
 	`
@@ -46,7 +46,7 @@ func (r PostgresTaskRepository) GetTaskById(ctx context.Context, id uuid.UUID) (
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status,
 		&t.CreatedAt, &t.RetryCount, &t.MaxRetries, &t.LastErrorMsg, &t.UpdatedAt, &t.NextRunAt,
-		&t.ExpiresAt,
+		&t.ExpiresAt, &t.Priority,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -69,7 +69,7 @@ func (r PostgresTaskRepository) GetPendingTasks(ctx context.Context, limit int) 
 		SELECT id
         FROM tasks
 			WHERE next_run_at <= NOW() AND status = 'pending' AND (expires_at IS NULL OR expires_at > NOW())
-		ORDER BY next_run_at
+		ORDER BY priority ASC, next_run_at
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED
 		)

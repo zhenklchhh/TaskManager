@@ -14,8 +14,14 @@ type Config struct {
 	RedisConfig           RedisConfig     `yaml:"redis"`
 	MailHogConfig         MailHogConfig   `yaml:"mailhog"`
 	SchedulerConfig       SchedulerConfig `yaml:"scheduler"`
+	WorkerConfig          WorkerConfig    `yaml:"worker"`
 	Server                HTTPServer      `yaml:"server"`
 	DefaultTaskMaxRetries int             `yaml:"default-max-retries" env-default:"3"`
+}
+
+type WorkerConfig struct {
+	MaxConcurrency int           `yaml:"max-concurrency" env-default:"10"`
+	LockTimeout    time.Duration `yaml:"lock-timeout" env-default:"5m"`
 }
 
 type HTTPServer struct {
