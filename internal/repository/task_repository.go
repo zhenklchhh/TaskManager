@@ -19,4 +19,9 @@ type TaskRepository interface {
 	GetTaskStats(ctx context.Context) (*domain.TaskStats, error)
 	GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error)
 	GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error)
+	BatchCreate(ctx context.Context, tasks []*domain.Task) (int, error)
+	BatchCancel(ctx context.Context, ids []uuid.UUID) (int, error)
+	BatchUpdatePriority(ctx context.Context, ids []uuid.UUID, priority int) (int, error)
+	GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error)
+	GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error)
 }

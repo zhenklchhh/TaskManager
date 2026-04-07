@@ -91,7 +91,7 @@ func TestCreateTask(t *testing.T) {
 			}
 
 			handler := &Handler{taskService: svc}
-			router := Routes(handler)
+			router := Routes(handler, &HealthChecker{}, &DashboardHandler{}, &BatchHandler{}, &DependencyHandler{}, &NotificationHandler{})
 
 			var bodyReader *bytes.Reader
 			if tt.body != "" {
@@ -188,7 +188,7 @@ func TestGetTaskById(t *testing.T) {
 			}
 
 			handler := &Handler{taskService: svc}
-			router := Routes(handler)
+			router := Routes(handler, &HealthChecker{}, &DashboardHandler{}, &BatchHandler{}, &DependencyHandler{}, &NotificationHandler{})
 
 			path := "/api/v1/tasks/" + tt.id
 			req := httptest.NewRequest(http.MethodGet, path, nil)

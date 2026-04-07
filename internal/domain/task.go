@@ -18,6 +18,7 @@ const (
 
 type Task struct {
 	ID           uuid.UUID
+	ParentID     *uuid.UUID
 	Title        string
 	Type         string
 	LastErrorMsg string

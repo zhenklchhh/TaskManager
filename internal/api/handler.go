@@ -5,10 +5,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
+	"github.com/zhenklchhh/TaskManager/internal/metrics"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
 
@@ -39,6 +40,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		handleError(err, w)
 		return
 	}
+	metrics.RecordTaskCreated(t.Type, string(t.Status))
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	err = json.NewEncoder(w).Encode(toTaskResponse(t))
@@ -77,6 +79,10 @@ func handleError(err error, w http.ResponseWriter) {
 	case errors.Is(err, domain.ErrInvalidCron):
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	case errors.Is(err, domain.ErrValidation):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, domain.ErrBatchEmpty):
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	case errors.Is(err, domain.ErrBatchTooLarge):
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	case errors.Is(err, domain.ErrTaskNotFound):
 		http.Error(w, err.Error(), http.StatusNotFound)

@@ -11,7 +11,7 @@ scheduler:
   stale-task-threshold: 2m
 
 server:
-  address: "localhost:8080"
+  address: "localhost:8081"
   timeout: 4s
   iddle_timeout: 60s
 

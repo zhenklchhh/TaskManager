@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/zhenklchhh/TaskManager/internal/domain"
+	"github.com/zhenklchhh/TaskManager/internal/metrics"
 	"github.com/zhenklchhh/TaskManager/internal/queue/redis"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -57,6 +58,7 @@ func (s *Scheduler) schedulePendingTasksCycle(t *time.Ticker) {
 			t.Stop()
 			return
 		case <-t.C:
+			metrics.RecordSchedulerRun()
 			tasks, err := s.taskService.ProcessPendingTasks(context.Background(), 50)
 			for _, taskID := range tasks {
 				task, getErr := s.taskService.GetTaskById(context.Background(), taskID)
@@ -74,6 +76,7 @@ func (s *Scheduler) schedulePendingTasksCycle(t *time.Ticker) {
 				}
 			}
 			if err != nil {
+				metrics.RecordSchedulerError()
 				slog.Error("scheduler transaction failed", "error", err)
 			}
 		}

@@ -172,3 +172,104 @@ func (s *TaskService) GetAllTasks(ctx context.Context, limit, offset int, status
 func (s *TaskService) GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error) {
 	return s.repo.GetTaskCount(ctx, status)
 }
+
+const maxBatchSize = 100
+
+func (s *TaskService) BatchCreateTasks(ctx context.Context, cmd *domain.BatchCreateCmd) ([]*domain.Task, error) {
+	if len(cmd.Tasks) == 0 {
+		return nil, domain.ErrBatchEmpty
+	}
+	if len(cmd.Tasks) > maxBatchSize {
+		return nil, domain.ErrBatchTooLarge
+	}
+
+	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+	now := time.Now()
+	tasks := make([]*domain.Task, 0, len(cmd.Tasks))
+
+	for _, c := range cmd.Tasks {
+		if c.CronExpr == "" || c.Type == "" || c.Title == "" || c.Payload == "" {
+			return nil, domain.ErrValidation
+		}
+		sch, err := parser.Parse(c.CronExpr)
+		if err != nil {
+			return nil, domain.ErrInvalidCron
+		}
+
+		maxRetries := s.defaultTaskMaxRetries
+		if c.MaxRetries != nil {
+			maxRetries = *c.MaxRetries
+		}
+
+		priority := 5
+		if c.Priority != nil {
+			priority = *c.Priority
+			if priority < 1 {
+				priority = 1
+			}
+			if priority > 10 {
+				priority = 10
+			}
+		}
+
+		t := &domain.Task{
+			ID:         uuid.New(),
+			Title:      c.Title,
+			Type:       c.Type,
+			Payload:    []byte(c.Payload),
+			CronExpr:   c.CronExpr,
+			Status:     domain.TaskStatusPending,
+			RetryCount: 0,
+			MaxRetries: maxRetries,
+			Priority:   priority,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+			NextRunAt:  sch.Next(now),
+			ExpiresAt:  c.ExpiresAt,
+		}
+		tasks = append(tasks, t)
+	}
+
+	_, err := s.repo.BatchCreate(ctx, tasks)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
+
+func (s *TaskService) BatchCancelTasks(ctx context.Context, cmd *domain.BatchCancelCmd) (int, error) {
+	if len(cmd.IDs) == 0 {
+		return 0, domain.ErrBatchEmpty
+	}
+	if len(cmd.IDs) > maxBatchSize {
+		return 0, domain.ErrBatchTooLarge
+	}
+	return s.repo.BatchCancel(ctx, cmd.IDs)
+}
+
+func (s *TaskService) BatchUpdatePriority(ctx context.Context, cmd *domain.BatchUpdatePriorityCmd) (int, error) {
+	if len(cmd.IDs) == 0 {
+		return 0, domain.ErrBatchEmpty
+	}
+	if len(cmd.IDs) > maxBatchSize {
+		return 0, domain.ErrBatchTooLarge
+	}
+	if cmd.Priority < 1 || cmd.Priority > 10 {
+		return 0, domain.ErrValidation
+	}
+	return s.repo.BatchUpdatePriority(ctx, cmd.IDs, cmd.Priority)
+}
+
+func (s *TaskService) GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error) {
+	if filter.Limit <= 0 || filter.Limit > 100 {
+		filter.Limit = 20
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	return s.repo.GetAllTasksFiltered(ctx, filter)
+}
+
+func (s *TaskService) GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error) {
+	return s.repo.GetTaskCountFiltered(ctx, filter)
+}

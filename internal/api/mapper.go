@@ -20,8 +20,36 @@ func toTaskResponse(t *domain.Task) *TaskResponse {
 	return &TaskResponse{
 		t.ID.String(),
 		t.Title,
+		t.Type,
 		string(t.Status),
 		t.NextRunAt.String(),
-		t.Type,
 	}
+}
+
+func toDashboardTaskResponse(t *domain.Task) *DashboardTaskResponse {
+	nextRunAt := t.NextRunAt
+	createdAt := t.CreatedAt
+	updatedAt := t.UpdatedAt
+	return &DashboardTaskResponse{
+		ID:           t.ID.String(),
+		Title:        t.Title,
+		Type:         t.Type,
+		Status:       string(t.Status),
+		Priority:     t.Priority,
+		RetryCount:   t.RetryCount,
+		MaxRetries:   t.MaxRetries,
+		NextRunAt:    &nextRunAt,
+		CreatedAt:    &createdAt,
+		UpdatedAt:    &updatedAt,
+		LastErrorMsg: t.LastErrorMsg,
+		CronExpr:     t.CronExpr,
+	}
+}
+
+func toDashboardTaskResponses(tasks []*domain.Task) []*DashboardTaskResponse {
+	result := make([]*DashboardTaskResponse, len(tasks))
+	for i, t := range tasks {
+		result[i] = toDashboardTaskResponse(t)
+	}
+	return result
 }

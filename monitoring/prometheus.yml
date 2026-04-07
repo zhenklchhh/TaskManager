@@ -13,6 +13,12 @@ scrape_configs:
 
   - job_name: 'taskmanager'
     static_configs:
-      - targets: ['taskmanager:8080']
+      - targets: ['host.docker.internal:8081']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  - job_name: 'taskmanager-worker'
+    static_configs:
+      - targets: ['host.docker.internal:8082']
     metrics_path: '/metrics'
     scrape_interval: 5s

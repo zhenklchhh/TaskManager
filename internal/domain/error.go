@@ -7,4 +7,6 @@ var (
 	ErrInvalidCron        = errors.New("invalid cron expression")
 	ErrValidation         = errors.New("invalid parameters")
 	ErrMaxRetriesExceeded = errors.New("max retries exceeded")
+	ErrBatchEmpty         = errors.New("batch is empty")
+	ErrBatchTooLarge      = errors.New("batch exceeds maximum size")
 )

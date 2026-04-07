@@ -18,6 +18,7 @@ import (
 	"github.com/zhenklchhh/TaskManager/internal/scheduler"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 	"github.com/zhenklchhh/TaskManager/logger"
+	"gopkg.in/mail.v2"
 )
 
 func main() {
@@ -45,11 +46,21 @@ func main() {
 	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
 	h := api.NewHandler(s)
 	dashboardHandler := api.NewDashboardHandler(s)
+	batchHandler := api.NewBatchHandler(s)
+
+	notifRepo := postgres.NewNotificationRepository(pool)
+	dialer := mail.NewDialer(cfg.MailHogConfig.Host, cfg.MailHogConfig.Port, cfg.MailHogConfig.Username, cfg.MailHogConfig.Password)
+	notifService := service.NewNotificationService(notifRepo, dialer)
+	notifHandler := api.NewNotificationHandler(notifService)
+
+	depRepo := postgres.NewDependencyRepository(pool)
+	depService := service.NewDependencyService(depRepo, repo)
+	depHandler := api.NewDependencyHandler(depService)
 	
 	// Create health checker
 	healthChecker := api.NewHealthChecker(pool, redisClient)
 	
-	r := api.Routes(h, healthChecker, dashboardHandler)
+	r := api.Routes(h, healthChecker, dashboardHandler, batchHandler, depHandler, notifHandler)
 	scheduler := scheduler.NewScheduler(s, time.Minute, &appRedis.RedisClient{
 		Client: redisClient,
 	}, cfg.SchedulerConfig.StaleTaskThreshold)

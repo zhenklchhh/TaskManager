@@ -91,6 +91,38 @@ func (s *stubRepository) UpdateStaleTasksToPending (ctx context.Context, thresho
 	return 0, nil
 }
 
+func (s *stubRepository) GetTaskStats(ctx context.Context) (*domain.TaskStats, error) {
+	return &domain.TaskStats{}, nil
+}
+
+func (s *stubRepository) GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error) {
+	return []*domain.Task{}, nil
+}
+
+func (s *stubRepository) GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error) {
+	return 0, nil
+}
+
+func (s *stubRepository) BatchCreate(ctx context.Context, tasks []*domain.Task) (int, error) {
+	return len(tasks), nil
+}
+
+func (s *stubRepository) BatchCancel(ctx context.Context, ids []uuid.UUID) (int, error) {
+	return len(ids), nil
+}
+
+func (s *stubRepository) BatchUpdatePriority(ctx context.Context, ids []uuid.UUID, priority int) (int, error) {
+	return len(ids), nil
+}
+
+func (s *stubRepository) GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error) {
+	return []*domain.Task{}, nil
+}
+
+func (s *stubRepository) GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error) {
+	return 0, nil
+}
+
 const defaultTaskMaxRetries = 3
 
 func TestTaskService_CreateTask(t *testing.T) {

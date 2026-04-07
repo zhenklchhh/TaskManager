@@ -29,3 +29,27 @@ type TaskUpdateForRetryCmd struct {
 	NextRunAt    time.Time
 	LastErrorMsg string
 }
+
+type BatchCreateCmd struct {
+	Tasks []TaskCreateCmd
+}
+
+type BatchCancelCmd struct {
+	IDs []uuid.UUID
+}
+
+type BatchUpdatePriorityCmd struct {
+	IDs      []uuid.UUID
+	Priority int
+}
+
+type TaskFilter struct {
+	Status      *TaskStatus
+	Type        *string
+	PriorityMin *int
+	PriorityMax *int
+	CreatedFrom *time.Time
+	CreatedTo   *time.Time
+	Limit       int
+	Offset      int
+}
