@@ -14,6 +14,10 @@ type TaskCreateCmd struct {
 	MaxRetries *int
 	Priority   *int
 	ExpiresAt  *time.Time
+	CompanyID  *uuid.UUID
+	GroupID    *uuid.UUID
+	CreatedBy  *uuid.UUID
+	AssignedTo *uuid.UUID
 }
 
 type TaskUpdateStatusCmd struct {
@@ -43,6 +47,19 @@ type BatchUpdatePriorityCmd struct {
 	Priority int
 }
 
+type TaskUpdateCmd struct {
+	ID         uuid.UUID
+	Title      *string
+	Payload    *string
+	Priority   *int
+	CronExpr   *string
+	MaxRetries *int
+	NextRunAt  *time.Time
+	GroupID    *uuid.UUID
+	AssignedTo *uuid.UUID
+	ClearGroup bool
+}
+
 type TaskFilter struct {
 	Status      *TaskStatus
 	Type        *string
@@ -50,6 +67,9 @@ type TaskFilter struct {
 	PriorityMax *int
 	CreatedFrom *time.Time
 	CreatedTo   *time.Time
+	CompanyID   *uuid.UUID
+	GroupID     *uuid.UUID
+	AssignedTo  *uuid.UUID
 	Limit       int
 	Offset      int
 }

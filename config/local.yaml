@@ -15,6 +15,15 @@ server:
   timeout: 4s
   iddle_timeout: 60s
 
+auth:
+  jwt-secret: "super-secret-key-change-in-production"
+  jwt-expiration-hours: 72
+  google-client-id: ""
+  google-client-secret: ""
+  github-client-id: ""
+  github-client-secret: ""
+  oauth-callback-url: "http://localhost:3000"
+
 mailhog:
   host: "localhost"
   port: 1025

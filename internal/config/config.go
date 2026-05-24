@@ -16,7 +16,18 @@ type Config struct {
 	SchedulerConfig       SchedulerConfig `yaml:"scheduler"`
 	WorkerConfig          WorkerConfig    `yaml:"worker"`
 	Server                HTTPServer      `yaml:"server"`
+	Auth                  AuthConfig      `yaml:"auth"`
 	DefaultTaskMaxRetries int             `yaml:"default-max-retries" env-default:"3"`
+}
+
+type AuthConfig struct {
+	JWTSecret          string `yaml:"jwt-secret" env:"JWT_SECRET"`
+	JWTExpirationHours int    `yaml:"jwt-expiration-hours" env-default:"72"`
+	GoogleClientID     string `yaml:"google-client-id" env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `yaml:"google-client-secret" env:"GOOGLE_CLIENT_SECRET"`
+	GitHubClientID     string `yaml:"github-client-id" env:"GITHUB_CLIENT_ID"`
+	GitHubClientSecret string `yaml:"github-client-secret" env:"GITHUB_CLIENT_SECRET"`
+	OAuthCallbackURL   string `yaml:"oauth-callback-url" env-default:"http://localhost:3000"`
 }
 
 type WorkerConfig struct {

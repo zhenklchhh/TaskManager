@@ -71,10 +71,31 @@ func (s *stubDashboardRepo) BatchUpdatePriority(ctx context.Context, ids []uuid.
 	return len(ids), nil
 }
 func (s *stubDashboardRepo) GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error) {
-	return []*domain.Task{}, nil
+	if s.tasksErr != nil {
+		return nil, s.tasksErr
+	}
+	return s.tasks, nil
 }
 func (s *stubDashboardRepo) GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error) {
-	return 0, nil
+	if s.countErr != nil {
+		return 0, s.countErr
+	}
+	return s.count, nil
+}
+func (s *stubDashboardRepo) GetTaskStatsForCompany(ctx context.Context, companyID uuid.UUID) (*domain.TaskStats, error) {
+	return &domain.TaskStats{}, nil
+}
+func (s *stubDashboardRepo) RescheduleTask(ctx context.Context, id uuid.UUID, nextRunAt time.Time) error {
+	return nil
+}
+func (s *stubDashboardRepo) UpdateTask(ctx context.Context, cmd domain.TaskUpdateCmd) error {
+	return nil
+}
+func (s *stubDashboardRepo) SoftDeleteTask(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+func (s *stubDashboardRepo) CancelTask(ctx context.Context, id uuid.UUID) error {
+	return nil
 }
 
 func TestGetStats_EmptyDB(t *testing.T) {

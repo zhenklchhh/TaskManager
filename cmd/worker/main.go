@@ -39,7 +39,9 @@ func main() {
 	}
 	redisClient := redis.NewRedisClient(cfg.RedisConfig.Address)
 	repo := postgres.NewTaskRepository(pool)
+	execRepo := postgres.NewExecutionRepository(pool)
 	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
+	s.SetExecutionRepository(execRepo)
 
 	notifRepo := postgres.NewNotificationRepository(pool)
 	dialer := mail.NewDialer(cfg.MailHogConfig.Host, cfg.MailHogConfig.Port, cfg.MailHogConfig.Username, cfg.MailHogConfig.Password)

@@ -1,0 +1,104 @@
+{
+  "_note": "This file is a duplicate. Use monitoring/grafana/dashboards/company-dashboard.json instead.",
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Tasks Created (by Company)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(tasks_company_total{company_id=\"$company_id\"}[5m])) by (group_id)",
+          "legendFormat": "Group: {{group_id}}"
+        }
+      ]
+    },
+    {
+      "title": "Active Tasks by Status",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "tasks_company_active{company_id=\"$company_id\"}",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "title": "Tasks by Group (Total)",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(tasks_company_total{company_id=\"$company_id\"}) by (group_id)",
+          "legendFormat": "{{group_id}}"
+        }
+      ]
+    },
+    {
+      "title": "Task Status Distribution",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(tasks_company_total{company_id=\"$company_id\"}) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "title": "Task Processing Duration (p95)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(task_processing_duration_seconds_bucket[5m])) by (le, type))",
+          "legendFormat": "{{type}} p95"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[5m])) by (endpoint)",
+          "legendFormat": "{{endpoint}}"
+        }
+      ]
+    },
+    {
+      "title": "HTTP Error Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"4..|5..\"}[5m])) by (status)",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "templating": {
+    "list": [
+      {
+        "name": "company_id",
+        "type": "query",
+        "query": "label_values(tasks_company_total, company_id)",
+        "refresh": 2,
+        "current": {}
+      }
+    ]
+  },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Company Task Dashboard",
+  "uid": "company-tasks",
+  "version": 1
+}

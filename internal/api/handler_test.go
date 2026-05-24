@@ -1,14 +1,15 @@
 package api
 
 import (
-	"context"
-	"errors"
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 )
@@ -34,6 +35,26 @@ func (s stubTaskService) GetTaskById(ctx context.Context, id uuid.UUID) (*domain
 		return s.getTaskByIDFn(ctx, id)
 	}
 	return nil, errors.New("GetTaskById not stubbed")
+}
+
+func (s stubTaskService) UpdateTask(ctx context.Context, cmd *domain.TaskUpdateCmd) (*domain.Task, error) {
+	return nil, nil
+}
+
+func (s stubTaskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (s stubTaskService) CancelTask(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (s stubTaskService) ManualRetry(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (s stubTaskService) GetTaskExecutions(ctx context.Context, taskID uuid.UUID) ([]*domain.TaskRun, error) {
+	return []*domain.TaskRun{}, nil
 }
 
 func TestCreateTask(t *testing.T) {
@@ -90,8 +111,7 @@ func TestCreateTask(t *testing.T) {
 				},
 			}
 
-			handler := &Handler{taskService: svc}
-			router := Routes(handler, &HealthChecker{}, &DashboardHandler{}, &BatchHandler{}, &DependencyHandler{}, &NotificationHandler{})
+			h := &Handler{taskService: svc}
 
 			var bodyReader *bytes.Reader
 			if tt.body != "" {
@@ -104,7 +124,7 @@ func TestCreateTask(t *testing.T) {
 			req.Header.Set("Content-Type", "application/json")
 
 			rr := httptest.NewRecorder()
-			router.ServeHTTP(rr, req)
+			h.CreateTask(rr, req)
 
 			if rr.Code != tt.expectedStatus {
 				t.Fatalf("expected status %d, got %d", tt.expectedStatus, rr.Code)
@@ -187,15 +207,16 @@ func TestGetTaskById(t *testing.T) {
 				},
 			}
 
-			handler := &Handler{taskService: svc}
-			router := Routes(handler, &HealthChecker{}, &DashboardHandler{}, &BatchHandler{}, &DependencyHandler{}, &NotificationHandler{})
+			h := &Handler{taskService: svc}
 
-			path := "/api/v1/tasks/" + tt.id
-			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/tasks/"+tt.id, nil)
 			req.Header.Set("Content-Type", "application/json")
+			rctx := chi.NewRouteContext()
+			rctx.URLParams.Add("id", tt.id)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 			rr := httptest.NewRecorder()
-			router.ServeHTTP(rr, req)
+			h.GetTaskById(rr, req)
 
 			if rr.Code != tt.expectedStatus {
 				t.Fatalf("expected status %d, got %d", tt.expectedStatus, rr.Code)

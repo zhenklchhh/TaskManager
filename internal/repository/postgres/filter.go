@@ -9,10 +9,25 @@ import (
 )
 
 func buildFilterQuery(base string, filter domain.TaskFilter) (string, []interface{}) {
-	conditions := []string{}
+	conditions := []string{"deleted_at IS NULL"}
 	args := []interface{}{}
 	argPos := 1
 
+	if filter.CompanyID != nil {
+		conditions = append(conditions, fmt.Sprintf("company_id = $%d", argPos))
+		args = append(args, *filter.CompanyID)
+		argPos++
+	}
+	if filter.GroupID != nil {
+		conditions = append(conditions, fmt.Sprintf("group_id = $%d", argPos))
+		args = append(args, *filter.GroupID)
+		argPos++
+	}
+	if filter.AssignedTo != nil {
+		conditions = append(conditions, fmt.Sprintf("assigned_to = $%d", argPos))
+		args = append(args, *filter.AssignedTo)
+		argPos++
+	}
 	if filter.Status != nil {
 		conditions = append(conditions, fmt.Sprintf("status = $%d", argPos))
 		args = append(args, string(*filter.Status))
@@ -55,7 +70,8 @@ func buildFilterQuery(base string, filter domain.TaskFilter) (string, []interfac
 func (r PostgresTaskRepository) GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error) {
 	base := `
 		SELECT id, title, type, payload, cron_expr, status, created_at, retry_count, max_retries,
-		COALESCE(last_error_message, ''), updated_at, next_run_at, expires_at, priority
+		COALESCE(last_error_message, ''), updated_at, next_run_at, expires_at, priority,
+		company_id, group_id, created_by, assigned_to
 		FROM tasks
 	`
 	query, args := buildFilterQuery(base, filter)
@@ -75,7 +91,8 @@ func (r PostgresTaskRepository) GetAllTasksFiltered(ctx context.Context, filter 
 		var t domain.Task
 		err := rows.Scan(&t.ID, &t.Title, &t.Type, &t.Payload, &t.CronExpr, &t.Status,
 			&t.CreatedAt, &t.RetryCount, &t.MaxRetries, &t.LastErrorMsg, &t.UpdatedAt,
-			&t.NextRunAt, &t.ExpiresAt, &t.Priority)
+			&t.NextRunAt, &t.ExpiresAt, &t.Priority,
+			&t.CompanyID, &t.GroupID, &t.CreatedBy, &t.AssignedTo)
 		if err != nil {
 			return nil, fmt.Errorf("get all tasks filtered: scan: %w", err)
 		}

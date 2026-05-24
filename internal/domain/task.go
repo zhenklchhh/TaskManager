@@ -14,6 +14,7 @@ const (
 	TaskStatusScheduled TaskStatus = "scheduled"
 	TaskStatusCompleted TaskStatus = "completed"
 	TaskStatusFailed    TaskStatus = "failed"
+	TaskStatusCancelled TaskStatus = "cancelled"
 )
 
 type Task struct {
@@ -32,4 +33,9 @@ type Task struct {
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 	ExpiresAt    *time.Time
+	CompanyID    *uuid.UUID
+	GroupID      *uuid.UUID
+	CreatedBy    *uuid.UUID
+	AssignedTo   *uuid.UUID
+	DeletedAt    *time.Time
 }

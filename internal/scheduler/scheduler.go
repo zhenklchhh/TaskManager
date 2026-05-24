@@ -34,10 +34,11 @@ func NewScheduler(taskService *service.TaskService, timeout time.Duration, clien
 }
 
 func (s *Scheduler) Start() {
-	t := time.NewTicker(s.timeout)
+	t1 := time.NewTicker(s.timeout)
+	t2 := time.NewTicker(s.timeout)
 	s.wg.Add(2)
-	go s.schedulePendingTasksCycle(t)
-	go s.rollbackScheduleTasksCycle(t)
+	go s.schedulePendingTasksCycle(t1)
+	go s.rollbackScheduleTasksCycle(t2)
 }
 
 func (s *Scheduler) Stop() {

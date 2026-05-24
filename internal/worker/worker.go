@@ -19,6 +19,7 @@ import (
 )
 
 type Worker struct {
+	id                  string
 	taskService         *service.TaskService
 	notificationService *service.NotificationService
 	dependencyService   *service.DependencyService
@@ -36,6 +37,7 @@ func NewWorker(taskService *service.TaskService, notificationService *service.No
 	dependencyService *service.DependencyService, timeout time.Duration, client *rdc.RedisClient,
 	workerAmount int, cfg config.MailHogConfig) *Worker {
 	return &Worker{
+		id:                  uuid.New().String(),
 		taskService:         taskService,
 		notificationService: notificationService,
 		dependencyService:   dependencyService,
@@ -155,31 +157,48 @@ func (w *Worker) workerCmd() {
 			}
 
 			oldStatus := task.Status
+
+			if _, supported := w.taskHandlers[task.Type]; !supported {
+				slog.Error("worker: unsupported task type, failing permanently", "type", task.Type, "id", id)
+				taskUpdateCmd.Status = domain.TaskStatusFailed
+				_ = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd)
+				w.notify(task, oldStatus, domain.TaskStatusFailed)
+				continue
+			}
+
 			taskUpdateCmd.Status = domain.TaskStatusRunning
 			if err = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
 				slog.Error("worker: failed to update task status", "error", err)
 			}
+
+			execRun, _ := w.taskService.CreateExecution(context.Background(), id, w.id)
+
 			startTime := time.Now()
-			err = w.executeTask(context.Background(), task)
-			duration := time.Since(startTime).Seconds()
+			execErr := w.executeTask(context.Background(), task)
+			duration := time.Since(startTime)
+			durationSec := duration.Seconds()
 			priorityStr := fmt.Sprintf("%d", task.Priority)
-			if err != nil {
-				slog.Error("worker: failed to complete task", "error", err)
-				metrics.RecordTaskProcessingDuration(task.Type, "failed", duration)
+			if execErr != nil {
+				slog.Error("worker: failed to complete task", "error", execErr)
+				metrics.RecordTaskProcessingDuration(task.Type, "failed", durationSec)
 				metrics.RecordWorkerTaskProcessed(fmt.Sprintf("%d", id), "failed")
 				metrics.RecordTaskProcessedByPriority(priorityStr, "failed")
+				if execRun != nil {
+					w.taskService.FinishExecution(context.Background(), execRun.ID, domain.TaskStatusFailed, execErr.Error(), "", duration.Milliseconds())
+				}
 				taskUpdateCmd.Status = domain.TaskStatusScheduled
-				w.taskService.RetryTask(context.Background(), id, err)
+				w.taskService.RetryTask(context.Background(), id, execErr)
 				w.notify(task, oldStatus, domain.TaskStatusFailed)
 				continue
-			} else {
-				metrics.RecordTaskProcessingDuration(task.Type, "completed", duration)
-				metrics.RecordWorkerTaskProcessed(fmt.Sprintf("%d", id), "completed")
-				metrics.RecordTaskProcessedByPriority(priorityStr, "completed")
-				taskUpdateCmd.Status = domain.TaskStatusCompleted
 			}
-			if err = w.taskService.UpdateTaskStatus(context.Background(), taskUpdateCmd); err != nil {
-				slog.Error("worker: failed to update task status", "error", err)
+			metrics.RecordTaskProcessingDuration(task.Type, "completed", durationSec)
+			metrics.RecordWorkerTaskProcessed(fmt.Sprintf("%d", id), "completed")
+			metrics.RecordTaskProcessedByPriority(priorityStr, "completed")
+			if execRun != nil {
+				w.taskService.FinishExecution(context.Background(), execRun.ID, domain.TaskStatusCompleted, "", "", duration.Milliseconds())
+			}
+			if err = w.taskService.MarkCompleted(context.Background(), id); err != nil {
+				slog.Error("worker: failed to mark task completed", "error", err)
 			}
 			w.notify(task, oldStatus, domain.TaskStatusCompleted)
 		}

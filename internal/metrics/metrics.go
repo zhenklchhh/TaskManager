@@ -33,6 +33,23 @@ var (
 		[]string{"type", "status"},
 	)
 
+	// Company-scoped task metrics
+	tasksCompanyTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "tasks_company_total",
+			Help: "Total number of tasks per company and group",
+		},
+		[]string{"company_id", "group_id", "type", "status"},
+	)
+
+	tasksCompanyActive = promauto.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: "tasks_company_active",
+			Help: "Active tasks per company",
+		},
+		[]string{"company_id", "status"},
+	)
+
 	taskProcessingDuration = promauto.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "task_processing_duration_seconds",
@@ -150,6 +167,14 @@ func RecordHTTPRequestDuration(method, endpoint string, duration float64) {
 // Task metrics functions
 func RecordTaskCreated(taskType, status string) {
 	tasksTotal.WithLabelValues(taskType, status).Inc()
+}
+
+func RecordTaskCreatedForCompany(companyID, groupID, taskType, status string) {
+	tasksCompanyTotal.WithLabelValues(companyID, groupID, taskType, status).Inc()
+}
+
+func SetCompanyActiveTaskGauge(companyID, status string, count float64) {
+	tasksCompanyActive.WithLabelValues(companyID, status).Set(count)
 }
 
 func RecordTaskProcessingDuration(taskType, status string, duration float64) {

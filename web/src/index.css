@@ -1,7 +1,96 @@
 @import "tailwindcss";
 
-body {
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
   margin: 0;
+  padding: 0;
   min-height: 100vh;
-  background: #0f172a;
+  background: #0b1120;
+  color: #e2e8f0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animated gradient background for auth pages */
+.bg-gradient-mesh {
+  background:
+    radial-gradient(at 27% 37%, hsla(215, 98%, 61%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 97% 21%, hsla(256, 98%, 72%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 52% 99%, hsla(354, 98%, 61%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 10% 29%, hsla(256, 96%, 67%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 97% 96%, hsla(190, 98%, 65%, 0.1) 0px, transparent 50%),
+    #0b1120;
+}
+
+/* Glassmorphism card */
+.glass-card {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card-hover:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #0b1120;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Smooth transitions */
+button, a, input, textarea, select {
+  transition: all 0.2s ease;
+}
+
+/* Input focus glow */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Loading spinner animation */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.7); }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
 }

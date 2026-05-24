@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/zhenklchhh/TaskManager/internal/domain"
 	"github.com/zhenklchhh/TaskManager/internal/service"
 )
@@ -19,7 +20,15 @@ func NewDashboardHandler(taskService *service.TaskService) *DashboardHandler {
 }
 
 func (h *DashboardHandler) GetStats(w http.ResponseWriter, r *http.Request) {
-	stats, err := h.taskService.GetTaskStats(r.Context())
+	var stats *domain.TaskStats
+	var err error
+
+	companyID := GetCompanyID(r.Context())
+	if companyID != nil {
+		stats, err = h.taskService.GetTaskStatsForCompany(r.Context(), *companyID)
+	} else {
+		stats, err = h.taskService.GetTaskStats(r.Context())
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -30,35 +39,40 @@ func (h *DashboardHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *DashboardHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit <= 0 || limit > 100 {
-		limit = 20
+	filter := domain.TaskFilter{}
+
+	// Scope to current user's company
+	filter.CompanyID = GetCompanyID(r.Context())
+
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		filter.Limit, _ = strconv.Atoi(limitStr)
+	}
+	if filter.Limit <= 0 || filter.Limit > 100 {
+		filter.Limit = 20
 	}
 
-	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
-	if offset < 0 {
-		offset = 0
+	if offsetStr := r.URL.Query().Get("offset"); offsetStr != "" {
+		filter.Offset, _ = strconv.Atoi(offsetStr)
 	}
 
-	var status *domain.TaskStatus
 	if statusStr := r.URL.Query().Get("status"); statusStr != "" {
 		s := domain.TaskStatus(statusStr)
-		status = &s
+		filter.Status = &s
 	}
 
-	tasks, err := h.taskService.GetAllTasks(r.Context(), limit, offset, status)
+	tasks, err := h.taskService.GetAllTasksFiltered(r.Context(), filter)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	count, _ := h.taskService.GetTaskCount(r.Context(), status)
+	count, _ := h.taskService.GetTaskCountFiltered(r.Context(), filter)
 
 	response := map[string]interface{}{
 		"tasks":  toDashboardTaskResponses(tasks),
 		"total":  count,
-		"limit":  limit,
-		"offset": offset,
+		"limit":  filter.Limit,
+		"offset": filter.Offset,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -67,6 +81,20 @@ func (h *DashboardHandler) GetTasks(w http.ResponseWriter, r *http.Request) {
 
 func (h *DashboardHandler) GetTasksFiltered(w http.ResponseWriter, r *http.Request) {
 	filter := domain.TaskFilter{}
+
+	// Scope to current user's company
+	filter.CompanyID = GetCompanyID(r.Context())
+
+	if groupStr := r.URL.Query().Get("group_id"); groupStr != "" {
+		if id, err := uuid.Parse(groupStr); err == nil {
+			filter.GroupID = &id
+		}
+	}
+	if assignedStr := r.URL.Query().Get("assigned_to"); assignedStr != "" {
+		if id, err := uuid.Parse(assignedStr); err == nil {
+			filter.AssignedTo = &id
+		}
+	}
 
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		filter.Limit, _ = strconv.Atoi(limitStr)

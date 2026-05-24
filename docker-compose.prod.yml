@@ -1,0 +1,100 @@
+services:
+
+  # ── Infrastructure ──────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  mailhog:
+    image: mailhog/mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025"   # Web UI — close this port if not needed publicly
+
+  # ── Backend ─────────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      CONFIG_PATH: config/prod.yaml
+
+  # ── Migrations (runs once then exits) ───────────────────────────────────────
+  migrate:
+    image: migrate/migrate:v4.17.0
+    env_file: .env.prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command: ["-path", "/migrations", "-database", "${DATABASE_URL}", "up"]
+
+  # ── Frontend (nginx) ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  # ── Monitoring ───────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning/datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml
+      - ./monitoring/grafana/provisioning/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:

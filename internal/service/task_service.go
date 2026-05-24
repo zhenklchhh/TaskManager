@@ -16,10 +16,16 @@ import (
 type TaskServiceInterface interface {
 	CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd) (*domain.Task, error)
 	GetTaskById(ctx context.Context, id uuid.UUID) (*domain.Task, error)
+	UpdateTask(ctx context.Context, cmd *domain.TaskUpdateCmd) (*domain.Task, error)
+	DeleteTask(ctx context.Context, id uuid.UUID) error
+	CancelTask(ctx context.Context, id uuid.UUID) error
+	ManualRetry(ctx context.Context, id uuid.UUID) error
+	GetTaskExecutions(ctx context.Context, taskID uuid.UUID) ([]*domain.TaskRun, error)
 }
 
 type TaskService struct {
 	repo                  repository.TaskRepository
+	execRepo              repository.ExecutionRepository
 	defaultTaskMaxRetries int
 }
 
@@ -28,6 +34,10 @@ func NewTaskService(r repository.TaskRepository, maxRetries int) *TaskService {
 		repo:                  r,
 		defaultTaskMaxRetries: maxRetries,
 	}
+}
+
+func (s *TaskService) SetExecutionRepository(r repository.ExecutionRepository) {
+	s.execRepo = r
 }
 
 func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd) (*domain.Task, error) {
@@ -86,6 +96,10 @@ func (s *TaskService) CreateTask(ctx context.Context, cmd *domain.TaskCreateCmd)
 		UpdatedAt:  now,
 		NextRunAt:  nextAt,
 		ExpiresAt:  expiresAt,
+		CompanyID:  cmd.CompanyID,
+		GroupID:    cmd.GroupID,
+		CreatedBy:  cmd.CreatedBy,
+		AssignedTo: cmd.AssignedTo,
 	}
 	if err := s.repo.Create(ctx, t); err != nil {
 		return nil, err
@@ -161,8 +175,114 @@ func (s *TaskService) UpdateStaleTasksToPending(ctx context.Context, threshold t
 	return s.repo.UpdateStaleTasksToPending(ctx, threshold)
 }
 
+func (s *TaskService) MarkCompleted(ctx context.Context, id uuid.UUID) error {
+	task, err := s.repo.GetTaskById(ctx, id)
+	if err != nil {
+		return err
+	}
+	if task.CronExpr != "" {
+		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+		sch, err := parser.Parse(task.CronExpr)
+		if err != nil {
+			slog.Warn("MarkCompleted: invalid cron_expr, marking as completed", "id", id, "cron", task.CronExpr)
+			return s.repo.UpdateTaskStatus(ctx, id, domain.TaskStatusCompleted)
+		}
+		nextAt := sch.Next(time.Now())
+		return s.repo.RescheduleTask(ctx, id, nextAt)
+	}
+	return s.repo.UpdateTaskStatus(ctx, id, domain.TaskStatusCompleted)
+}
+
+func (s *TaskService) UpdateTask(ctx context.Context, cmd *domain.TaskUpdateCmd) (*domain.Task, error) {
+	if cmd.CronExpr != nil {
+		parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+		sch, err := parser.Parse(*cmd.CronExpr)
+		if err != nil {
+			return nil, domain.ErrInvalidCron
+		}
+		nextAt := sch.Next(time.Now())
+		cmd.NextRunAt = &nextAt
+	}
+	if cmd.Priority != nil {
+		if *cmd.Priority < 1 {
+			*cmd.Priority = 1
+		}
+		if *cmd.Priority > 10 {
+			*cmd.Priority = 10
+		}
+	}
+	if err := s.repo.UpdateTask(ctx, *cmd); err != nil {
+		return nil, err
+	}
+	return s.repo.GetTaskById(ctx, cmd.ID)
+}
+
+func (s *TaskService) DeleteTask(ctx context.Context, id uuid.UUID) error {
+	if _, err := s.repo.GetTaskById(ctx, id); err != nil {
+		return err
+	}
+	return s.repo.SoftDeleteTask(ctx, id)
+}
+
+func (s *TaskService) CancelTask(ctx context.Context, id uuid.UUID) error {
+	task, err := s.repo.GetTaskById(ctx, id)
+	if err != nil {
+		return err
+	}
+	switch task.Status {
+	case domain.TaskStatusCompleted, domain.TaskStatusFailed, domain.TaskStatusCancelled:
+		return domain.ErrTaskNotCancellable
+	}
+	return s.repo.CancelTask(ctx, id)
+}
+
+func (s *TaskService) ManualRetry(ctx context.Context, id uuid.UUID) error {
+	task, err := s.repo.GetTaskById(ctx, id)
+	if err != nil {
+		return err
+	}
+	if task.Status != domain.TaskStatusFailed && task.Status != domain.TaskStatusCancelled {
+		return domain.ErrValidation
+	}
+	return s.repo.UpdateTaskForRetry(ctx, id, "", domain.TaskStatusPending, 0, time.Now().UTC())
+}
+
+func (s *TaskService) CreateExecution(ctx context.Context, taskID uuid.UUID, workerID string) (*domain.TaskRun, error) {
+	run := &domain.TaskRun{
+		ID:        uuid.New(),
+		TaskID:    taskID,
+		StartedAt: time.Now().UTC(),
+		Status:    domain.TaskStatusRunning,
+		WorkerID:  workerID,
+	}
+	if s.execRepo != nil {
+		if err := s.execRepo.CreateExecution(ctx, run); err != nil {
+			slog.Warn("CreateExecution: failed to persist", "task_id", taskID, "error", err)
+		}
+	}
+	return run, nil
+}
+
+func (s *TaskService) FinishExecution(ctx context.Context, id uuid.UUID, status domain.TaskStatus, errMsg, output string, durationMs int64) error {
+	if s.execRepo == nil {
+		return nil
+	}
+	return s.execRepo.FinishExecution(ctx, id, status, errMsg, output, durationMs)
+}
+
+func (s *TaskService) GetTaskExecutions(ctx context.Context, taskID uuid.UUID) ([]*domain.TaskRun, error) {
+	if s.execRepo == nil {
+		return []*domain.TaskRun{}, nil
+	}
+	return s.execRepo.GetByTaskID(ctx, taskID)
+}
+
 func (s *TaskService) GetTaskStats(ctx context.Context) (*domain.TaskStats, error) {
 	return s.repo.GetTaskStats(ctx)
+}
+
+func (s *TaskService) GetTaskStatsForCompany(ctx context.Context, companyID uuid.UUID) (*domain.TaskStats, error) {
+	return s.repo.GetTaskStatsForCompany(ctx, companyID)
 }
 
 func (s *TaskService) GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error) {

@@ -95,6 +95,10 @@ func (s *stubRepository) GetTaskStats(ctx context.Context) (*domain.TaskStats, e
 	return &domain.TaskStats{}, nil
 }
 
+func (s *stubRepository) GetTaskStatsForCompany(ctx context.Context, companyID uuid.UUID) (*domain.TaskStats, error) {
+	return &domain.TaskStats{}, nil
+}
+
 func (s *stubRepository) GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error) {
 	return []*domain.Task{}, nil
 }
@@ -121,6 +125,22 @@ func (s *stubRepository) GetAllTasksFiltered(ctx context.Context, filter domain.
 
 func (s *stubRepository) GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error) {
 	return 0, nil
+}
+
+func (s *stubRepository) RescheduleTask(ctx context.Context, id uuid.UUID, nextRunAt time.Time) error {
+	return nil
+}
+
+func (s *stubRepository) UpdateTask(ctx context.Context, cmd domain.TaskUpdateCmd) error {
+	return nil
+}
+
+func (s *stubRepository) SoftDeleteTask(ctx context.Context, id uuid.UUID) error {
+	return nil
+}
+
+func (s *stubRepository) CancelTask(ctx context.Context, id uuid.UUID) error {
+	return nil
 }
 
 const defaultTaskMaxRetries = 3

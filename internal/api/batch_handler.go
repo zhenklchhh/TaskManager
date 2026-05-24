@@ -29,9 +29,12 @@ func (h *BatchHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	companyID := GetCompanyID(r.Context())
+	userID := GetUserID(r.Context())
+
 	cmds := make([]domain.TaskCreateCmd, 0, len(req.Tasks))
 	for _, t := range req.Tasks {
-		cmds = append(cmds, domain.TaskCreateCmd{
+		cmd := domain.TaskCreateCmd{
 			Title:      t.Title,
 			Type:       t.Type,
 			Payload:    t.Payload,
@@ -39,7 +42,22 @@ func (h *BatchHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 			MaxRetries: t.MaxRetries,
 			Priority:   t.Priority,
 			ExpiresAt:  t.ExpiresAt,
-		})
+			CompanyID:  companyID,
+		}
+		if userID != (uuid.UUID{}) {
+			cmd.CreatedBy = &userID
+		}
+		if t.GroupID != nil {
+			if id, err := uuid.Parse(*t.GroupID); err == nil {
+				cmd.GroupID = &id
+			}
+		}
+		if t.AssignedTo != nil {
+			if id, err := uuid.Parse(*t.AssignedTo); err == nil {
+				cmd.AssignedTo = &id
+			}
+		}
+		cmds = append(cmds, cmd)
 	}
 
 	tasks, err := h.taskService.BatchCreateTasks(r.Context(), &domain.BatchCreateCmd{Tasks: cmds})

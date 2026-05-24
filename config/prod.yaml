@@ -1,0 +1,31 @@
+env: "production"
+default-max-retries: 3
+db:
+   url: "${DATABASE_URL}"
+redis:
+  address: "${REDIS_ADDR}"
+  password: "${REDIS_PASSWORD}"
+  database: 0
+
+scheduler:
+  stale-task-threshold: 2m
+
+server:
+  address: "0.0.0.0:8081"
+  timeout: 4s
+  iddle_timeout: 60s
+
+auth:
+  jwt-secret: "${JWT_SECRET}"
+  jwt-expiration-hours: 72
+  google-client-id: "${GOOGLE_CLIENT_ID}"
+  google-client-secret: "${GOOGLE_CLIENT_SECRET}"
+  github-client-id: "${GITHUB_CLIENT_ID}"
+  github-client-secret: "${GITHUB_CLIENT_SECRET}"
+  oauth-callback-url: "${APP_URL}"
+
+mailhog:
+  host: "${MAIL_HOST}"
+  port: 1025
+  username: ""
+  password: ""

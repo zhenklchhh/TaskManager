@@ -42,25 +42,55 @@ func main() {
 		Addr: cfg.RedisConfig.Address,
 	})
 	
+	// Task repositories and services
 	repo := postgres.NewTaskRepository(pool)
+	execRepo := postgres.NewExecutionRepository(pool)
 	s := service.NewTaskService(repo, cfg.DefaultTaskMaxRetries)
+	s.SetExecutionRepository(execRepo)
 	h := api.NewHandler(s)
 	dashboardHandler := api.NewDashboardHandler(s)
 	batchHandler := api.NewBatchHandler(s)
 
+	// Notification
 	notifRepo := postgres.NewNotificationRepository(pool)
 	dialer := mail.NewDialer(cfg.MailHogConfig.Host, cfg.MailHogConfig.Port, cfg.MailHogConfig.Username, cfg.MailHogConfig.Password)
 	notifService := service.NewNotificationService(notifRepo, dialer)
 	notifHandler := api.NewNotificationHandler(notifService)
 
+	// Dependencies
 	depRepo := postgres.NewDependencyRepository(pool)
 	depService := service.NewDependencyService(depRepo, repo)
 	depHandler := api.NewDependencyHandler(depService)
+
+	// Auth, Company, Group
+	userRepo := postgres.NewUserRepository(pool)
+	companyRepo := postgres.NewCompanyRepository(pool)
+	groupRepo := postgres.NewGroupRepository(pool)
+
+	authService := service.NewAuthService(userRepo, companyRepo, cfg.Auth)
+	companyService := service.NewCompanyService(companyRepo, userRepo, groupRepo)
+	groupService := service.NewGroupService(groupRepo)
+
+	authHandler := api.NewAuthHandler(authService)
+	companyHandler := api.NewCompanyHandler(companyService)
+	groupHandler := api.NewGroupHandler(groupService)
 	
 	// Create health checker
 	healthChecker := api.NewHealthChecker(pool, redisClient)
 	
-	r := api.Routes(h, healthChecker, dashboardHandler, batchHandler, depHandler, notifHandler)
+	r := api.Routes(api.RouteParams{
+		Handler:          h,
+		HealthChecker:    healthChecker,
+		DashboardHandler: dashboardHandler,
+		BatchHandler:     batchHandler,
+		DepHandler:       depHandler,
+		NotifHandler:     notifHandler,
+		AuthHandler:      authHandler,
+		CompanyHandler:   companyHandler,
+		GroupHandler:     groupHandler,
+		AuthService:      authService,
+	})
+
 	scheduler := scheduler.NewScheduler(s, time.Minute, &appRedis.RedisClient{
 		Client: redisClient,
 	}, cfg.SchedulerConfig.StaleTaskThreshold)

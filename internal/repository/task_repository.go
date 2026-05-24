@@ -17,6 +17,7 @@ type TaskRepository interface {
 		nextRunAt time.Time) error
 	UpdateStaleTasksToPending(ctx context.Context, threshold time.Duration) (int, error)
 	GetTaskStats(ctx context.Context) (*domain.TaskStats, error)
+	GetTaskStatsForCompany(ctx context.Context, companyID uuid.UUID) (*domain.TaskStats, error)
 	GetAllTasks(ctx context.Context, limit, offset int, status *domain.TaskStatus) ([]*domain.Task, error)
 	GetTaskCount(ctx context.Context, status *domain.TaskStatus) (int, error)
 	BatchCreate(ctx context.Context, tasks []*domain.Task) (int, error)
@@ -24,4 +25,8 @@ type TaskRepository interface {
 	BatchUpdatePriority(ctx context.Context, ids []uuid.UUID, priority int) (int, error)
 	GetAllTasksFiltered(ctx context.Context, filter domain.TaskFilter) ([]*domain.Task, error)
 	GetTaskCountFiltered(ctx context.Context, filter domain.TaskFilter) (int, error)
+	RescheduleTask(ctx context.Context, id uuid.UUID, nextRunAt time.Time) error
+	UpdateTask(ctx context.Context, cmd domain.TaskUpdateCmd) error
+	SoftDeleteTask(ctx context.Context, id uuid.UUID) error
+	CancelTask(ctx context.Context, id uuid.UUID) error
 }

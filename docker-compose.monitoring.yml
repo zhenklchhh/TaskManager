@@ -18,10 +18,10 @@ services:
       - prometheus_data:/prometheus
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.0.0
     container_name: grafana
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
